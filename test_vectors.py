@@ -5,14 +5,26 @@ from vector import Vector as vec
 v = vec(1, 1)
 
 
-@pytest.mark.parametrize("args, pos", [((1, 1), ((1, 1))), ((1, 1, 1), ((1, 1, 1)))])
+# Test initializing vectors with varying lengths, and filling of pos
+@pytest.mark.parametrize(
+    "args, pos",
+    [((1, 1), ((1, 1))), ((1, 1, 1), ((1, 1, 1))), ((1,), ((1,))), ((), (()))],
+)
 def test_init(args, pos):
     v = vec(*args)
-    assert v._pos == pos
+    assert v._coords == pos
+    assert v.pos == pos
 
 
 def test_getitem():
+    v = vec(1, 2, 3)
     assert v[0] == 1
+    assert v[-1] == 3
+
+
+# def test_getitem_exception():
+#     with pytest.raises(IndexError) as e:
+#         assert v[2] == None
 
 
 def test_len():

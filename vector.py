@@ -1,33 +1,81 @@
 from math import acos
-from typing import Any, Union, Optional
+from typing import Any, Union, Optional, Tuple
 
 
 class Vector:
     """ A tuple-like class that supports vector operations, similar to numpy arrays.
     """
 
-    def __init__(self, *coords: Union[float, int]):
-        self._pos = tuple([float(pt) for pt in coords])
+    vector_like = Union["Vector", tuple, list]
+    scalar_like = Union[float, int]
+
+    def __init__(self, *coords: "Vector.scalar_like"):
+        self._coords = coords
+        if not all(Vector.is_scalarlike(el) for el in self._coords):
+            raise TypeError("Vector coords must be of int or float type.")
+
+        self._pos = None  # type: Optional[Tuple[float]]
         self._unit = None  # type: Optional[Vector]
         self._mag = None  # type: Optional[float]
 
-    def __getitem__(self, i):
-        return self._pos[i]
+    def __getitem__(self, i: Union[slice, int]) -> Union[tuple, float]:
+        """ Use the subscript [] operator and with vectors as you would with lists
+        and tuples.
 
-    def __len__(self):
-        return len(self._pos)
+        Arguments:
+            i {Union[slice, int]} -- Index for element selection.
 
-    def __repr__(self):
-        return str(self._pos)
+        Returns:
+            float -- Element at selected index.
+        """
+        if isinstance(i, slice):
+            return self.pos[i.start : i.stop : i.step]
+        elif isinstance(i, int):
+            if i < len(self):
+                return self.pos[i]
+            raise IndexError("Index '{}' exceeds vector length.".format(i))
+        else:
+            raise TypeError("Operand must have type int or slice.")
 
-    def __str__(self):
-        return self.__repr__()
+    def __len__(self) -> int:
+        """ Use the len() function on vectors as you lists and tuples.
 
-    def __iter__(self):
+        Returns:
+            int -- The length (dimension) of the vector self.
+        """
+        return len(self.pos)
+
+    def __repr__(self) -> str:
+        """ An unambiguous representation for vector self printing. (useful for debugging)
+
+        Returns:
+            str -- vector representation
+        """
+        return "Vector: " + self.__str__()
+
+    def __str__(self) -> str:
+        """ A simple string representation of vector self.
+
+        Returns:
+            str -- vector self as a string.
+        """
+        return str(self.pos)
+
+    def __iter__(self) -> "Vector":
+        """ Resets iteration; needed for Iterator Protocol.
+
+        Returns:
+            Vector -- self
+        """
         self.n = 0
         return self
 
-    def __next__(self):
+    def __next__(self) -> float:
+        """ Defines Vector iterator behavior by stepping through vector dimensions.
+
+        Returns:
+            float -- Vector value on dimension self.n.
+        """
         if self.n < len(self):
             result = self[self.n]
             self.n += 1
@@ -36,182 +84,297 @@ class Vector:
             raise StopIteration
 
     @property
+    def pos(self) -> Tuple[float]:
+        if not self._pos:
+            self._pos = tuple([float(pt) for pt in self._coords])
+            del self._coords
+        return self._pos
+
+    @pos.setter
+    def pos(self, new_val: "Tuple[Vector.scalar_like]") -> None:
+        raise AttributeError("Vectors are immutable.")
+
+    @property
     def unit(self) -> "Vector":
-        """ The vector in the direction of self with a magnitude of 1.
+        """ Vector in the direction of self with a magnitude of 1.
 
         Returns:
-            Vector -- a unit vector in the direction of self.
+            Vector -- Unit vector in the direction of self.
         """
         if not self._unit:
-            self._unit = Vector(*(el / self.mag for el in self._pos))
+            self._unit = Vector(*(el / self.mag for el in self.pos))
         return self._unit
 
     @unit.setter
-    def unit(self, new_val: Union["Vector", tuple, list]) -> None:
-        print("Sorry, the Vector class is immutable.")
+    def unit(self, new_val: "Vector.vector_like") -> None:
+        raise AttributeError("Vectors are immutable.")
 
     @property
     def mag(self) -> float:
-        """ The length of the vector.
+        """ Length of the vector self.
 
         Returns:
             float -- the magnitude of the vector.
         """
         if not self._mag:
-            self._mag = sum(el ** 2 for el in self._pos) ** (1 / 2)
+            self._mag = sum(el ** 2 for el in self.pos) ** (1 / 2)
         return self._mag
 
     @mag.setter
-    def mag(self, new_val: Any) -> None:
-        print("Sorry, the Vector class is immutable.")
+    def mag(self, new_val: "Vector.scalar_like") -> None:
+        raise AttributeError("Vectors are immutable.")
 
     @classmethod
-    def from_unit(cls, unit: tuple, mag: float) -> "Vector":
-        """ Create a vec instance by specifying a direction and length.
+    def from_unit(
+        cls, unit: "Vector.vector_like", mag: "Vector.scalar_like"
+    ) -> "Vector":
+        """ Create a Vector instance by specifying a direction and length.
 
         Arguments:
-            unit {tuple} -- The direction of desired vector. If not of mag 1, will be internally reduced to 1.
-            mag {float} -- [description]
+            unit {Vector.vector_like} -- The direction of desired vector.
+                                        If not of mag 1, will be internally reduced to 1.
+            mag {Vector.scalar_like} -- The length of the desired vector.
 
         Returns:
             Vector -- A vector in the direction of unit and the length of mag.
         """
-        if isinstance(unit, tuple) or isinstance(unit, list):
-            unit = Vector(*unit).unit._pos
+        if not Vector.is_vectorlike(unit):
+            raise TypeError("Arg unit must be vector-like.")
+        unit = Vector.from_vectorlike(unit).unit.pos
         return cls(*(mag * el for el in unit))
 
     @classmethod
-    def from_vectorlike(cls, vectorlike: Union["Vector", list, tuple]) -> "Vector":
+    def from_vectorlike(cls, vectorlike: "Vector.vector_like") -> "Vector":
+        """ Create a vector instance from a vector-like object.
+
+        Arguments:
+            vectorlike {vector.vector_like} -- Vector-like to base Vector on.
+
+        Returns:
+            Vector -- A vector with the same coordinates as vectorlike.
+        """
         return cls(*vectorlike)
 
     @staticmethod
     def is_vectorlike(potential: Any) -> bool:
-        if all(
-            isinstance(element, float) or isinstance(element, int)
-            for element in potential
-        ):
+        """ Test for object being vector-like.
+
+        Arguments:
+            potential {Any} -- Object to test for vector-likeness.
+
+        Returns:
+            bool -- Whether potential is vector-like or not.
+        """
+        if all(Vector.is_scalarlike(element) for element in potential):
             return True
         return False
 
-    def __add__(self, other: Union["Vector", list, tuple]) -> "Vector":
-        if Vector.is_vectorlike(other):
-            return Vector(*(se + oe for se, oe in zip(self, other)))
-        raise ValueError("Operand must be vector-like. (Vector, list, or tuple)")
+    @staticmethod
+    def is_scalarlike(potential: Any) -> bool:
+        """ Test for object being scalar-like.
 
-    def __radd__(self, other: Union["Vector", list, tuple]) -> "Vector":
-        if Vector.is_vectorlike(other):
-            return self + other
-        raise ValueError("Operand must be vector-like. (Vector, list, or tuple)")
+        Arguments:
+            potential {Any} -- Object to test for scalar-likeness.
 
-    def __sub__(self, other: Union["Vector", list, tuple]) -> "Vector":
-        if Vector.is_vectorlike(other):
-            return Vector(*(se - oe for se, oe in zip(self, other)))
-        raise ValueError("Operand must be vector-like. (Vector, list, or tuple)")
+        Returns:
+            bool -- Whether potential is scalar-like or not.
+        """
+        if isinstance(potential, int) or isinstance(potential, float):
+            return True
+        return False
 
-    def __rsub__(self, other: Union["Vector", list, tuple]) -> "Vector":
-        if Vector.is_vectorlike(other):
-            return self - other
-        raise ValueError("Operand must be vector-like. (Vector, list, or tuple)")
+    def __add__(self, other: "Vector.vector_like") -> "Vector":
+        """ Vector addition implementation.
 
-    def __mul__(self, scalar: Union[float, int]) -> "Vector":
-        if isinstance(scalar, float) or isinstance(scalar, int):
-            return Vector(*(el * scalar for el in self))
-        raise ValueError("Operand must be scalar-like. (float or int)")
+        Arguments:
+            other {Vector.vector_like} -- Vector-like argument, second + operand.
 
-    def __rmul__(self, scalar: Union[float, int]) -> "Vector":
-        if isinstance(scalar, float) or isinstance(scalar, int):
-            return self * scalar
-        raise ValueError("Operand must be scalar-like. (float or int)")
+        Returns:
+            Vector -- New vector object, sum of self and other.
+        """
+        if not Vector.is_vectorlike(other):
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
+        return Vector(*(se + oe for se, oe in zip(self, other)))
+
+    def __radd__(self, other: "Vector.vector_like") -> "Vector":
+        """ Vector (reflexive) addition implementation.
+
+        Arguments:
+            other {Vector.vector_like} -- Vector-like argument, first + operand.
+
+        Returns:
+            Vector -- New vector object, sum of self and other.
+        """
+        if not Vector.is_vectorlike(other):
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
+        return self + other
+
+    def __iadd__(self, other: "Vector.vector_like") -> "Vector":
+        """ Vector addition implementation.
+
+        Returns:
+            Vector -- New vector object, sum of self and other, assigned to self.
+        """
+        if not Vector.is_vectorlike(other):
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
+        return self + other
+
+    def __sub__(self, other: "Vector.vector_like") -> "Vector":
+        """ Vector subtraction implementation.
+
+        Returns:
+            Vector -- New vector object, difference of self and other.
+        """
+        if not Vector.is_vectorlike(other):
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
+        return Vector(*(se - oe for se, oe in zip(self, other)))
+
+    def __rsub__(self, other: "Vector.vector_like") -> "Vector":
+        """ Vector (reflexive) subtraction implementation.
+
+        Returns:
+            Vector -- New vector object, difference of other and self.
+        """
+        if not Vector.is_vectorlike(other):
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
+        return other - self
+
+    def __isub__(self, other: "Vector.vector_like") -> "Vector":
+        """ Vector subtraction implementation.
+
+        Returns:
+            Vector -- New vector object, difference of self and other, assigned to self.
+        """
+        if not Vector.is_vectorlike(other):
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
+        return self - other
+
+    def __mul__(self, scalar: "Vector.scalar_like") -> "Vector":
+        """ Vector scalar multiplication implementation.
+
+        Returns:
+            Vector -- New vector object, scalar product of self and other.
+        """
+        if not Vector.is_scalarlike(scalar):
+            raise TypeError("Operand must be scalar-like. (float or int)")
+        return Vector(*(el * scalar for el in self))
+
+    def __rmul__(self, scalar: "Vector.scalar_like") -> "Vector":
+        """ Vector (reflexive) scalar multiplication implementation.
+
+        Returns:
+            Vector -- New vector object, scalar product of other and self.
+        """
+        if not Vector.is_scalarlike(scalar):
+            raise TypeError("Operand must be scalar-like. (float or int)")
+        return self * scalar
+
+    def __imul__(self, scalar: "Vector.scalar_like") -> "Vector":
+        """ Vector scalar multiplication implementation, with assignment.
+
+        Returns:
+            Vector - New vector object, scalar product of self and other, assigned to self.
+        """
+        if not Vector.is_scalarlike(scalar):
+            raise TypeError("Operand must be scalar-like. (float or int)")
+        return self * scalar
 
     @staticmethod
-    def dot(a: Union["Vector", list, tuple], b: Union["Vector", list, tuple]) -> float:
-        if Vector.is_vectorlike(a) and Vector.is_vectorlike(b):
-            return float(sum(ae * be for ae, be in zip(a, b)))
-        raise ValueError("Operands must be vector-like. (Vector, list, or tuple)")
+    def dot(a: "Vector.vector_like", b: "Vector.vector_like") -> float:
+        """ Calculate the dot product between two vectors. If a and b are different lengths,
+            summing stops at the end of the shorter operand.
+
+        Arguments:
+            a {Vector.vector_like} -- Vector 1
+            b {Vector.vector_like} -- Vector 2
+
+        Returns:
+            float -- the dot product between a and b.
+        """
+        if not Vector.is_vectorlike(a) and Vector.is_vectorlike(b):
+            raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
+        return float(sum(ae * be for ae, be in zip(a, b)))
 
     @staticmethod
-    def cross(
-        a: Union["Vector", list, tuple], b: Union["Vector", list, tuple]
-    ) -> "Vector":
-        """ Calculate the cross products between two vectors in R3. If a or b are of
+    def cross(a: "Vector.vector_like", b: "Vector.vector_like") -> "Vector":
+        """ Calculate the cross product between two vectors in R3. If a or b are of
             higher dimensions, they will be reduced to their first three elements. If they
             are in smaller dimensions, they will be padded with 0s.
 
         Arguments:
-            a {Vector} -- Vector 1
-            b {Vector} -- Vector 2
+            a {Vector.vector_like} -- Vector 1
+            b {Vector.vector_like} -- Vector 2
 
         Returns:
             Vector -- A vector orthogonal to a and b
         """
-        if Vector.is_vectorlike(a) and Vector.is_vectorlike(b):
-            v1, v2 = [[0, 0, 0] for i in range(2)]
-            v1[0 : len(a)] = a[0:3]
-            v2[0 : len(b)] = b[0:3]
+        if not Vector.is_vectorlike(a) and Vector.is_vectorlike(b):
+            raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
 
-            return Vector(
-                (v1[1] * v2[2]) - (v1[2] * v2[1]),
-                (v1[2] * v2[0]) - (v1[0] * v2[2]),
-                (v1[0] * v2[1]) - (v1[1] * v2[0]),
-            )
-        raise ValueError("Operands must be vector-like. (Vector, list, or tuple)")
+        v1, v2 = [[0, 0, 0] for i in range(2)]
+        v1[0 : len(a)] = a[0:3]
+        v2[0 : len(b)] = b[0:3]
+
+        return Vector(
+            (v1[1] * v2[2]) - (v1[2] * v2[1]),
+            (v1[2] * v2[0]) - (v1[0] * v2[2]),
+            (v1[0] * v2[1]) - (v1[1] * v2[0]),
+        )
 
     @staticmethod
-    def angle(
-        a: Union["Vector", list, tuple], b: Union["Vector", list, tuple]
-    ) -> float:
+    def angle(a: "Vector.vector_like", b: "Vector.vector_like") -> float:
         """ Determine the angle between two vectors.
 
         Arguments:
-            a {Vector} -- Vector 1
-            b {Vector} -- Vector 2
+            a {Vector.vector_like} -- Vector 1
+            b {Vector.vector_like} -- Vector 2
 
         Returns:
             float -- The angle between a, b in radians.
         """
         if not Vector.is_vectorlike(a) and Vector.is_vectorlike(b):
-            raise ValueError("Operands must be vector-like. (Vector, list, or tuple)")
+            raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
         return acos((Vector.dot(a, b)) / (a.mag * b.mag))
 
-    def comp(self, other: Union["Vector", list, tuple]) -> float:
+    def comp(self, other: "Vector.vector_like") -> float:
         """ Scalar projection of vector self on vector other.
 
         Arguments:
-            other {Vector} -- The target vector to project self on.
+            other {Vector.vector_like} -- The target vector to project self on.
 
         Returns:
             float -- The resultant scalar.
         """
         if not Vector.is_vectorlike(other):
-            raise ValueError("Operand must be vector-like. (Vector, list, or tuple)")
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
         other = Vector.from_vectorlike(other)
         return Vector.dot(self, other) / other.mag
 
-    def proj(self, other: Union["Vector", list, tuple]) -> "Vector":
+    def proj(self, other: "Vector.vector_like") -> "Vector":
         """ Projection of vector self on vector other.
 
         Arguments:
-            other {Vector} -- The target vector to project self on.
+            other {Vector.vector_like} -- The target vector to project self on.
 
         Returns:
             Vector -- The resultant projected vector.
         """
         if not Vector.is_vectorlike(other):
-            raise ValueError("Operand must be vector-like. (Vector, list, or tuple)")
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
         other = Vector.from_vectorlike(other)
         return Vector.dot(self, other.unit) * other.unit
 
-    def reject(self, other: Union["Vector", list, tuple]) -> "Vector":
+    def reject(self, other: "Vector.vector_like") -> "Vector":
         """ Rejection of vector self on vector other.
 
         Arguments:
-            other {Vector} -- The target vector to reject self on
+            other {Vector.vector_like} -- The target vector to reject self on
 
         Returns:
             Vector -- The resultant reject vector
         """
         if not Vector.is_vectorlike:
-            raise ValueError("Operand must be vector-like. (Vector, list, or tuple)")
+            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
         other = Vector.from_vectorlike(other)
         return self - ((Vector.dot(self, other) / Vector.dot(self, other)) * other)
