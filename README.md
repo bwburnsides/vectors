@@ -13,7 +13,7 @@ Vectors are created by instantiating the `Vector()` class with any number of des
 
 - To learn `mypy` and strong type hinting in Python.
 
-- To learn `pytest` and maintain a rigorously tested project.
+- To learn `pytest` and maintain a rigorously tested project. (WIP)
 
 - To practice maintaining useful and descriptive documentation.
 
