@@ -1,5 +1,5 @@
 import pytest
-from vector import vec
+from vector import Vector as vec
 
 # "Fixtures"?
 v = vec(1, 1)
