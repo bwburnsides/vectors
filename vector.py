@@ -1,4 +1,4 @@
-from math import acos
+from math import acos, floor, ceil
 from typing import Any, Union, Optional, Tuple
 
 
@@ -237,7 +237,7 @@ class Vector:
         """
         if not Vector.is_vectorlike(other):
             raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
-        return other - self
+        return -self + other
 
     def __isub__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector subtraction implementation.
@@ -278,6 +278,54 @@ class Vector:
         if not Vector.is_scalarlike(scalar):
             raise TypeError("Operand must be scalar-like. (float or int)")
         return self * scalar
+
+    def __neg__(self):
+        """ Negation implementation.
+
+        Returns:
+            Vector -- a new vector == -1 * self
+        """
+        return Vector(*(-el for el in self))
+
+    def __pos__(self):
+        """ Positation implementation.
+
+        Returns:
+            Vector -- a new vector == 1 * self
+        """
+        return Vector(*(+el for el in self))
+
+    def __abs__(self):
+        """ abs() implementation.
+
+        Returns:
+            Vector -- a new vector whose elements are the absolute value of the elements of self.
+        """
+        return Vector(*(abs(el) for el in self))
+
+    def __floor__(self):
+        """ math.floor() implementation.
+
+        Returns
+            Vector -- a new vector with all elements rounded down to the closest integer (as floats.)
+        """
+        return Vector(*(float(floor(el)) for el in self))
+
+    def __ceil__(self):
+        """ math.ceil() implementation.
+
+        Returns
+            Vector -- a new vector with all elements rounded up to the closest integer (as floats.)
+        """
+        return Vector(*(float(ceil(el)) for el in self))
+
+    def __round__(self, n):
+        """ round() implementation.
+
+        Returns
+            Vector -- a new vector with all elements rounded to n decimal places.
+        """
+        return Vector(*(float(round(el, n)) for el in self))
 
     @staticmethod
     def dot(a: "Vector.vector_like", b: "Vector.vector_like") -> float:
