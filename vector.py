@@ -3,13 +3,12 @@ from typing import Any, Union, Optional, Tuple
 
 
 class Vector:
-    """ A tuple-like class that supports vector operations, similar to numpy arrays.
-    """
+    "A tuple-like class that supports vector operations, similar to numpy arrays."
 
     vector_like = Union["Vector", tuple, list]
     scalar_like = Union[float, int]
 
-    def __init__(self, *coords: "Vector.scalar_like"):
+    def __init__(self, *coords: "Vector.vector_like"):
         self._coords = coords if coords else (0, 0, 0)
         if not all(Vector.is_scalarlike(el) for el in self._coords):
             raise TypeError("Vector coords must be of int or float type.")
@@ -20,6 +19,10 @@ class Vector:
 
         self.cross = self._cross
         self.dot = self._dot
+        self.angle = self._angle
+        self.comp = self._comp
+        self.proj = self._proj
+        self.reject = self._reject
 
     def __getitem__(self, i: Union[slice, int]) -> Union[tuple, float]:
         """ Use the subscript [] operator and with vectors as you would with lists
@@ -339,8 +342,7 @@ class Vector:
         return Vector(*(float(round(el, n)) for el in self))
 
     def __complex__(self):
-        v = [0, 0]
-        v[0 : len(self)] = self[0:2]
+        v = [0, 0][0 : len(self)] = self[0:2]
         return complex(v[0], v[1])
 
     @staticmethod
@@ -361,7 +363,7 @@ class Vector:
             raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
         return float(sum(ae * be for ae, be in zip(a, b)))
 
-    def _dot(self, other: "Vector.vector_like") -> "Vector.vector_like":
+    def _dot(self, other: "Vector.vector_like") -> float:
         return Vector.dot(self, other)
 
     @staticmethod
@@ -392,11 +394,13 @@ class Vector:
             (v1[0] * v2[1]) - (v1[1] * v2[0]),
         )
 
-    def _cross(self, other: "Vector.vector_like") -> "Vector.vector_like":
+    def _cross(self, other: "Vector.vector_like") -> "Vector":
         return Vector.cross(self, other)
 
     @staticmethod
-    def angle(a: "Vector.vector_like", b: "Vector.vector_like") -> float:
+    def angle(  # pylint: disable=method-hidden
+        a: "Vector.vector_like", b: "Vector.vector_like"
+    ) -> float:
         """ Determine the angle between two vectors.
 
         Arguments:
@@ -411,44 +415,71 @@ class Vector:
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
         return acos((Vector.dot(a, b)) / (a.mag * b.mag))
 
-    def comp(self, other: "Vector.vector_like") -> float:
-        """ Scalar projection of vector self on vector other.
+    def _angle(self, other: "Vector.vector_like") -> float:
+        return Vector.angle(self, other)
+
+    @staticmethod
+    def comp(  # pylint: disable=method-hidden
+        a: "Vector.vector_like", b: "Vector.vector_like"
+    ) -> float:
+        """ Scalar projection of vector a on vector b.
 
         Arguments:
-            other {Vector.vector_like} -- The target vector to project self on.
+            a {Vector.vector_like} -- The base vector to project.
+            b {Vector.vector_like} -- The target vector to project self on.
 
         Returns:
             float -- The resultant scalar.
         """
-        if not Vector.is_vectorlike(other):
-            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
-        other = Vector.from_vectorlike(other)
-        return Vector.dot(self, other) / other.mag
+        if not Vector.is_vectorlike(a) or not Vector.is_vectorlike(b):
+            raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
+        a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
+        return Vector.dot(a, b) / b.mag
 
-    def proj(self, other: "Vector.vector_like") -> "Vector":
-        """ Projection of vector self on vector other.
+    def _comp(self, other: "Vector.vector_like") -> float:
+        "Instance-method implementation of scalar projection."
+        return Vector.comp(self, other)
+
+    @staticmethod
+    def proj(  # pylint: disable=method-hidden
+        a: "Vector.vector_like", b: "Vector.vector_like"
+    ) -> "Vector":
+        """ Projection of vector a on vector b.
 
         Arguments:
-            other {Vector.vector_like} -- The target vector to project self on.
+            a {Vector.vector_like} -- The base vector to project.
+            b {Vector.vector_like} -- The target vector to project self on.
 
         Returns:
             Vector -- The resultant projected vector.
         """
-        if not Vector.is_vectorlike(other):
-            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
-        other = Vector.from_vectorlike(other)
-        return Vector.dot(self, other.unit) * other.unit
+        if not Vector.is_vectorlike(a) or not Vector.is_vectorlike(b):
+            raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
+        a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
+        return Vector.dot(a, b.unit) * b.unit
 
-    def reject(self, other: "Vector.vector_like") -> "Vector":
-        """ Rejection of vector self on vector other.
+    def _proj(self, other: "Vector.vector_like") -> "Vector":
+        "Instance-method implementation of vector projection."
+        return Vector.proj(self, other)
+
+    @staticmethod
+    def reject(  # pylint: disable=method-hidden
+        a: "Vector.vector_like", b: "Vector.vector_like"
+    ) -> "Vector":
+        """ Rejection of vector a on vector b.
 
         Arguments:
-            other {Vector.vector_like} -- The target vector to reject self on
+            a {Vector.vector_like} -- The base vector to reject.
+            b {Vector.vector_like} -- The target vector to reject self on.
 
         Returns:
             Vector -- The resultant reject vector
         """
-        if not Vector.is_vectorlike:
-            raise TypeError("Operand must be vector-like. (Vector, list, or tuple)")
-        other = Vector.from_vectorlike(other)
-        return self - ((Vector.dot(self, other) / Vector.dot(self, other)) * other)
+        if not Vector.is_vectorlike(a) or not Vector.is_vectorlike(b):
+            raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
+        a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
+        return a - ((Vector.dot(a, b) / Vector.dot(a, b)) * b)
+
+    def _reject(self, other: "Vector.vector_like") -> "Vector":
+        "Instance-method implementation of vector rejection."
+        return Vector.reject(self, other)
