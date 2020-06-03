@@ -19,6 +19,7 @@ class Vector:
 
         self.cross = self._cross
         self.dot = self._dot
+        self.box = self._box
         self.angle = self._angle
         self.comp = self._comp
         self.proj = self._proj
@@ -398,6 +399,35 @@ class Vector:
         return Vector.cross(self, other)
 
     @staticmethod
+    def box(  # pylint: disable=method-hidden
+        a: "Vector.vector_like", b: "Vector.vector_like", c: "Vector.vector_like"
+    ) -> float:
+        """ Vector scalar triple product, or box product
+
+        Arguments:
+            a {Vector.vector_like} -- Vector 1
+            b {Vector.vector_like} -- Vector 2
+            c {Vector.vector_like} -- Vector 3
+
+        Returns:
+            float -- scalar triple product of a, b, c.
+        """
+        if not (
+            Vector.is_vectorlike(a)
+            and Vector.is_vectorlike(b)
+            and Vector.vector_like(c)
+        ):
+            raise TypeError("Operands must be vector-like. (Vector, list, tuple)")
+        a = Vector.from_vectorlike(a)
+        b = Vector.from_vectorlike(b)
+        c = Vector.from_vectorlike(c)
+        return a.dot(b.cross(c))
+
+    def _box(self, *vecs: "Vector.vector_like") -> float:
+        "Instance-method implementation of scalar triple product."
+        return Vector.box(self, vecs[0], vecs[1])
+
+    @staticmethod
     def angle(  # pylint: disable=method-hidden
         a: "Vector.vector_like", b: "Vector.vector_like"
     ) -> float:
@@ -413,7 +443,7 @@ class Vector:
         if not Vector.is_vectorlike(a) and Vector.is_vectorlike(b):
             raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
-        return acos((Vector.dot(a, b)) / (a.mag * b.mag))
+        return acos((a.dot(b)) / (a.mag * b.mag))
 
     def _angle(self, other: "Vector.vector_like") -> float:
         return Vector.angle(self, other)
@@ -434,7 +464,7 @@ class Vector:
         if not Vector.is_vectorlike(a) or not Vector.is_vectorlike(b):
             raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
-        return Vector.dot(a, b) / b.mag
+        return a.dot(a) / b.mag
 
     def _comp(self, other: "Vector.vector_like") -> float:
         "Instance-method implementation of scalar projection."
@@ -456,7 +486,7 @@ class Vector:
         if not Vector.is_vectorlike(a) or not Vector.is_vectorlike(b):
             raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
-        return Vector.dot(a, b.unit) * b.unit
+        return a.dot(b.unit) * b.unit
 
     def _proj(self, other: "Vector.vector_like") -> "Vector":
         "Instance-method implementation of vector projection."
@@ -478,7 +508,7 @@ class Vector:
         if not Vector.is_vectorlike(a) or not Vector.is_vectorlike(b):
             raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
-        return a - ((Vector.dot(a, b) / Vector.dot(a, b)) * b)
+        return a - ((a.dot(b) / b.dot(b)) * b)
 
     def _reject(self, other: "Vector.vector_like") -> "Vector":
         "Instance-method implementation of vector rejection."
