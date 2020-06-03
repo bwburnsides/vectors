@@ -19,7 +19,7 @@ class Vector:
         self._mag = None  # type: Optional[float]
 
         self.cross = self._cross
-        self.dot = self._cross
+        self.dot = self._dot
 
     def __getitem__(self, i: Union[slice, int]) -> Union[tuple, float]:
         """ Use the subscript [] operator and with vectors as you would with lists
@@ -366,7 +366,7 @@ class Vector:
 
     @staticmethod
     def cross(  # pylint: disable=method-hidden
-        a: "Vector.vector_like", b: Union[None, "Vector.vector_like"]
+        a: "Vector.vector_like", b: "Vector.vector_like"
     ) -> "Vector":
         """ Calculate the cross product between two vectors in R3. If a or b are of
             higher dimensions, they will be reduced to their first three elements. If they
