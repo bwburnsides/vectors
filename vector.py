@@ -1,4 +1,4 @@
-from math import acos, floor, ceil
+from math import acos, cos, sin, floor, ceil
 from typing import Any, Union, Optional, Tuple
 
 
@@ -10,13 +10,16 @@ class Vector:
     scalar_like = Union[float, int]
 
     def __init__(self, *coords: "Vector.scalar_like"):
-        self._coords = coords
+        self._coords = coords if coords else (0, 0, 0)
         if not all(Vector.is_scalarlike(el) for el in self._coords):
             raise TypeError("Vector coords must be of int or float type.")
 
         self._pos = None  # type: Optional[Tuple[float]]
         self._unit = None  # type: Optional[Vector]
         self._mag = None  # type: Optional[float]
+
+        self.cross = self._cross
+        self.dot = self._cross
 
     def __getitem__(self, i: Union[slice, int]) -> Union[tuple, float]:
         """ Use the subscript [] operator and with vectors as you would with lists
@@ -154,6 +157,14 @@ class Vector:
             Vector -- A vector with the same coordinates as vectorlike.
         """
         return cls(*vectorlike)
+
+    @classmethod
+    def from_angle(
+        cls, theta: "Vector.scalar_like", mag: "Vector.scalar_like"
+    ) -> "Vector":
+        if not Vector.is_scalarlike(theta) or not Vector.is_scalarlike(mag):
+            raise TypeError("Operands must be scalar-like. (int or float)")
+        return cls(float(mag) * cos(theta), float(mag) * sin(theta))
 
     @staticmethod
     def is_vectorlike(potential: Any) -> bool:
@@ -327,8 +338,15 @@ class Vector:
         """
         return Vector(*(float(round(el, n)) for el in self))
 
+    def __complex__(self):
+        v = [0, 0]
+        v[0 : len(self)] = self[0:2]
+        return complex(v[0], v[1])
+
     @staticmethod
-    def dot(a: "Vector.vector_like", b: "Vector.vector_like") -> float:
+    def dot(  # pylint: disable=method-hidden
+        a: "Vector.vector_like", b: "Vector.vector_like"
+    ) -> float:
         """ Calculate the dot product between two vectors. If a and b are different lengths,
             summing stops at the end of the shorter operand.
 
@@ -343,8 +361,13 @@ class Vector:
             raise TypeError("Operands must be vector-like. (Vector, list, or tuple)")
         return float(sum(ae * be for ae, be in zip(a, b)))
 
+    def _dot(self, other: "Vector.vector_like") -> "Vector.vector_like":
+        return Vector.dot(self, other)
+
     @staticmethod
-    def cross(a: "Vector.vector_like", b: "Vector.vector_like") -> "Vector":
+    def cross(  # pylint: disable=method-hidden
+        a: "Vector.vector_like", b: Union[None, "Vector.vector_like"]
+    ) -> "Vector":
         """ Calculate the cross product between two vectors in R3. If a or b are of
             higher dimensions, they will be reduced to their first three elements. If they
             are in smaller dimensions, they will be padded with 0s.
@@ -368,6 +391,9 @@ class Vector:
             (v1[2] * v2[0]) - (v1[0] * v2[2]),
             (v1[0] * v2[1]) - (v1[1] * v2[0]),
         )
+
+    def _cross(self, other: "Vector.vector_like") -> "Vector.vector_like":
+        return Vector.cross(self, other)
 
     @staticmethod
     def angle(a: "Vector.vector_like", b: "Vector.vector_like") -> float:
