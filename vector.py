@@ -1,8 +1,6 @@
 from math import acos, cos, sin, floor, ceil
 from typing import Any, Union, Optional, Tuple
 
-# TODO: Add exceptions raised to method docstrings so that users can implement exception handling.
-
 
 class Vector:
     "A tuple-like class that supports vector operations, similar to numpy arrays."
@@ -27,7 +25,7 @@ class Vector:
             *coords {Vector.scalar_like} -- The coordinates of the vector.
 
         Raises:
-            TypeError: One or more coords were not scalar-like.
+            TypeError -- One or more coords were not scalar-like.
         """
         self._coords = coords if coords else (0, 0, 0)
         if not all(Vector.is_scalarlike(el) for el in self._coords):
@@ -54,6 +52,10 @@ class Vector:
 
         Arguments:
             i {Union[slice, int]} -- Index for element selection.
+
+        Raises:
+            IndexError -- Index is greater than length of vector.
+            TypeError -- [] accepts only int or slice.
 
         Returns:
             float -- Element at selected index.
@@ -102,6 +104,9 @@ class Vector:
 
     def __next__(self) -> float:
         """ Defines Vector iterator behavior by stepping through vector dimensions.
+
+        Raises:
+            StopIteration -- The end of self.pos has been reached.
 
         Returns:
             float -- Vector value on dimension self.n.
@@ -170,6 +175,9 @@ class Vector:
                                         If not of mag 1, will be internally reduced to 1.
             mag {Vector.scalar_like} -- The length of the desired vector.
 
+        Raises:
+            TypeError -- Either `unit` was not vector-like, or mag was not scalar-like.
+
         Returns:
             Vector -- A vector in the direction of unit and the length of mag.
         """
@@ -202,7 +210,7 @@ class Vector:
             theta {Vector.scalar_like} -- Angle of vector in radians, relative to positive x-axis.
 
         Raises:
-            TypeError: If either theta or magnitude are not scalar-like.
+            TypeError -- If either theta or magnitude are not scalar-like.
 
         Returns:
             Vector -- A new Vector() instance with specified theta and mag.
@@ -251,6 +259,9 @@ class Vector:
         Arguments:
             *vecs {Vector.vector_like} -- Vectors to be padded.
 
+        Raises:
+            TypeError -- One or more vecs are not vector-like.
+
         Returns:
             vecs {Vector} -- Padded vectors.
         """
@@ -263,11 +274,18 @@ class Vector:
         vecs = [[vec[i] if i < len(vec) else 0 for i in range(m)] for vec in vecs]
         return (Vector.from_vectorlike(vec) for vec in vecs)
 
+    @staticmethod
+    def reduce_vectors(*vecs: "Vector.vector_like") -> Tuple["Vector"]:
+        raise NotImplementedError
+
     def __add__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector addition implementation.
 
         Arguments:
             other {Vector.vector_like} -- Vector-like argument, second + operand.
+
+        Raises:
+            TypeError -- other is not vector-like.
 
         Returns:
             Vector -- New vector object, sum of self and other.
@@ -277,8 +295,6 @@ class Vector:
                 Vector.messages["vector_like_singular"]
                 + Vector.messages["vector_types"]
             )
-        # TODO: Type checking is being performed both here and in Vector.pad_vectors. Perhaps
-        # this should be unified to only be done in one location. (Class-wide)
         a, b = Vector.pad_vectors(self, other)
         return Vector(*(sum(n) for n in zip(a, b)))
 
@@ -286,36 +302,35 @@ class Vector:
         """ Vector (reflexive) addition implementation.
 
         Arguments:
-            other {Vector.vector_like} -- Vector-like argument, first + operand.
+            other {Vector.vector_like} -- Vector-like argument, first '+' operand.
 
         Returns:
             Vector -- New vector object, sum of self and other.
         """
-        if not Vector.is_vectorlike(other):
-            raise TypeError(
-                Vector.messages["vector_like_singular"]
-                + Vector.messages["vector_types"]
-            )
         return self + other
 
     def __iadd__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector addition implementation.
 
+        Arguments:
+            other {Vector.vector_like} -- Vector-like argument, second '+=' operand.
+
         Returns:
             Vector -- New vector object, sum of self and other, assigned to self.
         """
-        if not Vector.is_vectorlike(other):
-            raise TypeError(
-                Vector.messages["vector_like_singular"]
-                + Vector.messages["vector_types"]
-            )
         return self + other
 
     def __sub__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector subtraction implementation.
 
+        Arguments:
+            other {Vector.vector_like} -- second '-' operand.
+
+        Raises:
+            TypeError -- other is not vector-like.
+
         Returns:
-            Vector -- New vector object, difference of self and other.
+            Vector -- new vector object, difference of self and other.
         """
         if not Vector.is_vectorlike(other):
             raise TypeError(
@@ -328,31 +343,33 @@ class Vector:
     def __rsub__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector (reflexive) subtraction implementation.
 
+        Arguments:
+            other {Vector.vector_like} -- first '-' operand.
+
         Returns:
-            Vector -- New vector object, difference of other and self.
+            Vector -- new vector object, difference of other and self.
         """
-        if not Vector.is_vectorlike(other):
-            raise TypeError(
-                Vector.messages["vector_like_singular"]
-                + Vector.messages["vector_types"]
-            )
         return -self + other
 
     def __isub__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector subtraction implementation.
 
+        Arguments:
+            other {Vector.vector_like} -- second '-=' operand.
+
         Returns:
             Vector -- New vector object, difference of self and other, assigned to self.
         """
-        if not Vector.is_vectorlike(other):
-            raise TypeError(
-                Vector.messages["vector_like_singular"]
-                + Vector.messages["vector_types"]
-            )
         return self - other
 
     def __mul__(self, scalar: "Vector.scalar_like") -> "Vector":
         """ Vector scalar multiplication implementation.
+
+        Arguments:
+            scalar {Vector.scalar_like} -- the second '*' argument.
+
+        Raises:
+            TypeError -- `scalar` is not scalar-like.
 
         Returns:
             Vector -- New vector object, scalar product of self and other.
@@ -367,35 +384,34 @@ class Vector:
     def __rmul__(self, scalar: "Vector.scalar_like") -> "Vector":
         """ Vector (reflexive) scalar multiplication implementation.
 
+        Arguments:
+            scalar {Vector.scalar_like} -- the first '*' operand.
+
         Returns:
             Vector -- New vector object, scalar product of other and self.
         """
-        if not Vector.is_scalarlike(scalar):
-            raise TypeError(
-                Vector.messages["scalar_like_singular"]
-                + Vector.messages["scalar_types"]
-            )
         return self * scalar
 
     def __imul__(self, scalar: "Vector.scalar_like") -> "Vector":
         """ Vector scalar multiplication implementation, with assignment.
 
+        Arguments:
+            scalar {Vector.scalar_like} -- second '*=' operand.
+
         Returns:
             Vector - New vector object, scalar product of self and other, assigned to self.
         """
-        if not Vector.is_scalarlike(scalar):
-            raise TypeError(
-                Vector.messages["scalar_like_singular"]
-                + Vector.messages["scalar_types"]
-            )
         return self * scalar
 
     def __truediv__(self, scalar: "Vector.scalar_like") -> "Vector":
         """ An implementation of "vector scalar division" aka vector scalar multiplication
             of the form self * (1/scalar)
 
+        Arguments:
+            scalar {Vector.scalar_like} -- The second '/' operand.
+
         Raises:
-            TypeError: If scalar is not scalar-like.
+            TypeError -- If scalar is not scalar-like.
 
         Returns:
             Vector -- A new vector as the result of self / scalar.
@@ -410,17 +426,12 @@ class Vector:
     def __itruediv__(self, scalar: "Vector.scalar_like") -> "Vector":
         """ An implementation of "vector scalar division" with assignment. See __truediv__.
 
-        Raises:
-            TypeError: If scalar is not scalar-like
+        Arguments:
+            scalar {Vector.scalar_like} -- seoncd '/=' operand.
 
         Returns:
             Vector -- A new vector, the result of self / scalar, assigned to self.
         """
-        if not Vector.is_scalarlike(scalar):
-            raise TypeError(
-                Vector.messages["scalar_like_singular"]
-                + Vector.messages["scalar_types"]
-            )
         return self / scalar
 
     def __eq__(self, other: Any) -> bool:
@@ -444,6 +455,9 @@ class Vector:
         Arguments:
             other {Vector.vector_like} -- Another vector being checked for greater-than.
 
+        Raises:
+            TypeError -- other is not vector-like.
+
         Returns:
             bool -- Whether self is greater than other.
         """
@@ -460,6 +474,9 @@ class Vector:
 
         Arguments:
             other {Vector.vector_like} -- Another vector being checked for less-than.
+
+        Raises:
+            TypeError -- if other is not vector-like.
 
         Returns:
             bool -- Whether self is less than other.
@@ -478,6 +495,9 @@ class Vector:
         Arguments:
             other {Vector.vector_like} -- Another vector being checked for greater-than-or-equal.
 
+        Raises:
+            TypeError -- other is not vector-like.
+
         Returns:
             bool -- Whether self is greater-than-or-equal to other.
         """
@@ -494,6 +514,9 @@ class Vector:
 
         Arguments:
             other {Vector.vector_like} -- Another vector being checked for less-than-or-equal.
+
+        Raises:
+            TypeError -- other is not vector-like.
 
         Returns:
             bool -- Whether self is less-than-or-equal to other.
@@ -560,6 +583,10 @@ class Vector:
         Arguments:
             n {int} -- number of decimals to round components of self to.
 
+        Raises:
+            TypeError -- if n isn't an int
+            ValueError -- if n < 0
+
         Returns:
             Vector -- a new vector with all elements rounded to n decimal places.
         """
@@ -590,6 +617,9 @@ class Vector:
             a {Vector.vector_like} -- Vector 1
             b {Vector.vector_like} -- Vector 2
 
+        Raises:
+            TypeError -- at least a or b not vector-like
+
         Returns:
             float -- the dot product between a and b.
         """
@@ -614,6 +644,9 @@ class Vector:
         Arguments:
             a {Vector.vector_like} -- Vector 1
             b {Vector.vector_like} -- Vector 2
+
+        Raises:
+            TypeError -- a or b not vector-like.
 
         Returns:
             Vector -- A vector orthogonal to a and b
@@ -648,6 +681,9 @@ class Vector:
             b {Vector.vector_like} -- Vector 2
             c {Vector.vector_like} -- Vector 3
 
+        Raises:
+            TypeError -- a, b, or c not vector-like.
+
         Returns:
             float -- scalar triple product of a, b, c.
         """
@@ -678,10 +714,13 @@ class Vector:
             a {Vector.vector_like} -- Vector 1
             b {Vector.vector_like} -- Vector 2
 
+        Raises:
+            TypeError -- a or b not vector-like.
+
         Returns:
             float -- The angle between a, b in radians.
         """
-        if not (Vector.is_vectorlike(a) or Vector.is_vectorlike(b)):
+        if not (Vector.is_vectorlike(a) and Vector.is_vectorlike(b)):
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
@@ -702,10 +741,13 @@ class Vector:
             a {Vector.vector_like} -- The base vector to project.
             b {Vector.vector_like} -- The target vector to project self on.
 
+        Raises:
+            TypeError -- a or b not vector-like.
+
         Returns:
             float -- The resultant scalar.
         """
-        if not (Vector.is_vectorlike(a) or Vector.is_vectorlike(b)):
+        if not (Vector.is_vectorlike(a) and Vector.is_vectorlike(b)):
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
@@ -726,10 +768,13 @@ class Vector:
             a {Vector.vector_like} -- The base vector to project.
             b {Vector.vector_like} -- The target vector to project self on.
 
+        Raises:
+            TypeError -- a or b not vector-like.
+
         Returns:
             Vector -- The resultant projected vector.
         """
-        if not (Vector.is_vectorlike(a) or Vector.is_vectorlike(b)):
+        if not (Vector.is_vectorlike(a) and Vector.is_vectorlike(b)):
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
@@ -750,10 +795,13 @@ class Vector:
             a {Vector.vector_like} -- The base vector to reject.
             b {Vector.vector_like} -- The target vector to reject self on.
 
+        Raises:
+            TypeError -- a or b not vector-like.
+
         Returns:
             Vector -- The resultant reject vector
         """
-        if not (Vector.is_vectorlike(a) or Vector.is_vectorlike(b)):
+        if not (Vector.is_vectorlike(a) and Vector.is_vectorlike(b)):
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
