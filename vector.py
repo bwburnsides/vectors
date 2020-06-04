@@ -244,33 +244,24 @@ class Vector:
         return False
 
     @staticmethod
-    def pad_vectors(
-        a: "Vector.vector_like", b: "Vector.vector_like"
-    ) -> Tuple["Vector", "Vector"]:
-        """ On input of two vectors, pad the vector with fewer components with zeros to match the
-            length of the vector with more components. Useful for vector addition and subtracting.
+    def pad_vectors(*vecs: "Vector.vector_like") -> Tuple["Vector"]:
+        """ Returned vectors will be padded with zeroes such that they all share the same length
+            as the vector with the most components.
 
         Arguments:
-            a {Vector.vector_like} -- Vector 1
-            b {Vector.vector_like} -- Vector 2
+            *vecs {Vector.vector_like} -- Vectors to be padded.
 
         Returns:
-            a_aug {Vector} -- Vector 1, potentially augmented
-            b_aug {Vector} -- Vector 2, potentially augmented
+            vecs {Vector} -- Padded vectors.
         """
-        # TODO: Figure out how to generalize this such that it may accept
-        # an arbitrary number of vectors at once.
-        if not (Vector.is_vectorlike(a) and Vector.is_vectorlike(b)):
+        if not all(Vector.is_vectorlike(vec) for vec in vecs):
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
-        a_aug, b_aug = list(a), list(b)
-        alen, blen = len(a_aug), len(b_aug)
-        if max(alen, blen) == alen:
-            b_aug[:] = [b_aug[i] if i < blen else 0 for i, j in enumerate(a_aug)]
-        else:
-            a_aug[:] = [a_aug[i] if i < alen else 0 for i, j in enumerate(b_aug)]
-        return a_aug, b_aug
+        vecs = [list(vec) for vec in vecs]
+        m = max(len(vec) for vec in vecs)
+        vecs = [[vec[i] if i < len(vec) else 0 for i in range(m)] for vec in vecs]
+        return (Vector.from_vectorlike(vec) for vec in vecs)
 
     def __add__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector addition implementation.

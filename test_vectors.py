@@ -59,6 +59,7 @@ def test_isvectorlike(pot, res):
         (vec(1, 1, 1), vec(1, 1, 1, 1), False),
         (vec(1, 1, 1), (1, 1, 1, 1), False),
         (vec(1, 2, 1), vec(1, 1, 1), False),
+        (vec(1), True, False),
     ],
 )
 def test_eq(a, b, expected):
@@ -71,10 +72,25 @@ def test_eq(a, b, expected):
         (vec(1, 1, 1), vec(2, 2, 2), vec(3, 3, 3)),
         (vec(1, 1), vec(1, 1, 1), vec(2, 2, 1)),
         (vec(1, 1, 1), vec(1, 1), vec(2, 2, 1)),
+        ([1, 1], vec(1, 1), vec(2, 2)),
+        ([1, 1, 1], vec(1, 1), vec(2, 2, 1)),
+        ([1, 1], vec(1, 1, 1), vec(2, 2, 1)),
     ],
 )
 def test_add(a, b, expected):
     assert (a + b) == expected
+
+
+@pytest.mark.parametrize(
+    "a,b,expected",
+    [
+        (vec(1, 1), vec(1, 1), vec(0, 0)),
+        (vec(1), vec(1, 1, 1), vec(0, -1, -1)),
+        (vec(1, 1, 1), vec(1), vec(0, 1, 1)),
+    ],
+)
+def test_sub(a, b, expected):
+    assert (a - b) == expected
 
 
 def test_mag():
