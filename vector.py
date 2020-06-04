@@ -1,6 +1,8 @@
 from math import acos, cos, sin, floor, ceil
 from typing import Any, Union, Optional, Tuple
 
+# TODO: Add exception raising to method docstrings so that users can implement exception handling.
+
 
 class Vector:
     "A tuple-like class that supports vector operations, similar to numpy arrays."
@@ -18,10 +20,20 @@ class Vector:
         "vector_types": "(Vector, tuple, list)",
     }
 
-    def __init__(self, *coords: "Vector.scalar_like"):
+    def __init__(self, *coords: "Vector.scalar_like") -> None:
+        """ Initialize a new Vector() object.
+
+        Arguments:
+            *coords {Vector.scalar_like} -- The coordinates of the vector.
+
+        Raises:
+            TypeError: One or more coords were not scalar-like.
+        """
         self._coords = coords if coords else (0, 0, 0)
         if not all(Vector.is_scalarlike(el) for el in self._coords):
-            raise TypeError("Vector coords must be of int or float type.")
+            raise TypeError(
+                "Vector coords must be scalar-like. " + Vector.messages["scalar_types"]
+            )
 
         self._pos = None  # type: Optional[Tuple[float]]
         self._unit = None  # type: Optional[Vector]
@@ -103,6 +115,11 @@ class Vector:
 
     @property
     def pos(self) -> Tuple[float]:
+        """ A tuple of coordinates from Vector self.
+
+        Returns:
+            Tuple[float] -- The vector coordinates.
+        """
         if not self._pos:
             self._pos = tuple([float(pt) for pt in self._coords])
             del self._coords
@@ -179,6 +196,17 @@ class Vector:
     def from_angle(
         cls, theta: "Vector.scalar_like", mag: "Vector.scalar_like"
     ) -> "Vector":
+        """ Create a Vector() object from an angle and length.
+
+        Arguments:
+            theta {Vector.scalar_like} -- Angle of vector in radians, relative to positive x-axis.
+
+        Raises:
+            TypeError: If either theta or magnitude are not scalar-like.
+
+        Returns:
+            Vector -- A new Vector() instance with specified theta and mag.
+        """
         if not (Vector.is_scalarlike(theta) and Vector.is_scalarlike(mag)):
             raise TypeError(
                 Vector.messages["scalar_like_plural"] + Vector.messages["scalar_types"]
@@ -345,6 +373,15 @@ class Vector:
         return self * scalar
 
     def __truediv__(self, scalar: "Vector.scalar_like") -> "Vector":
+        """ An implementation of "vector scalar division" aka vector scalar multiplication
+            of the form self * (1/scalar)
+
+        Raises:
+            TypeError: If scalar is not scalar-like.
+
+        Returns:
+            Vector -- A new vector as the result of self / scalar.
+        """
         if not Vector.is_scalarlike(scalar):
             raise TypeError(
                 Vector.messages["scalar_like_singular"]
@@ -353,6 +390,14 @@ class Vector:
         return (1 / scalar) * self
 
     def __itruediv__(self, scalar: "Vector.scalar_like") -> "Vector":
+        """ An implementation of "vector scalar division" with assignment. See __truediv__.
+
+        Raises:
+            TypeError: If scalar is not scalar-like
+
+        Returns:
+            Vector -- A new vector, the result of self / scalar, assigned to self.
+        """
         if not Vector.is_scalarlike(scalar):
             raise TypeError(
                 Vector.messages["scalar_like_singular"]
@@ -361,26 +406,78 @@ class Vector:
         return self / scalar
 
     def __eq__(self, other: Any) -> bool:
+        """ Implementation of equality check. Vectors are equivalent if they have
+            all the same coords, and are not equal to any other data type.
+
+        Arguments:
+            other {Any} -- Another object being checked for equality.
+
+        Returns:
+            bool -- Whether self and other are equivalent.
+        """
         if not Vector.is_vectorlike(other):
-            raise TypeError(
-                Vector.messages["vector_like_singular"]
-                + Vector.messages["vector_types"]
-            )
+            return False
         return self.pos == Vector.from_vectorlike(other).pos
 
     def __gt__(self, other: "Vector.vector_like") -> bool:
+        """ Vector greater-than comparison. A vector is greater than another
+            iff its magnitude is greater.
+
+        Arguments:
+            other {Vector.vector_like} -- Another vector being checked for greater-than.
+
+        Returns:
+            bool -- Whether self is greater than other.
+        """
+        # TODO: Implement TypeError Handling here.
         return self.mag > other.mag
 
     def __lt__(self, other: "Vector.vector_like") -> bool:
+        """ Vector less-than comparison. A vector is less than another
+            iff its magnitude is lesser.
+
+        Arguments:
+            other {Vector.vector_like} -- Another vector being checked for less-than.
+
+        Returns:
+            bool -- Whether self is less than other.
+        """
+        # TODO: Implement TypeError Handling here.
         return self.mag < other.mag
 
     def __ge__(self, other: "Vector.vector_like") -> bool:
+        """ Vector greater-than-or-equal comparison. A vector is greater-than-or-equal to another
+            iff its magnitude is greater-than-or-equal.
+
+        Arguments:
+            other {Vector.vector_like} -- Another vector being checked for greater-than-or-equal.
+
+        Returns:
+            bool -- Whether self is greater-than-or-equal to other.
+        """
+        # TODO: Implement TypeError Handling here.
         return self.mag >= other.mag
 
     def __le__(self, other: "Vector.vector_like") -> bool:
+        """ Vector less-than-or-equal comparison. A vector is less-than-or-equal to another
+            iff its magnitude is less-than-or-equal.
+
+        Arguments:
+            other {Vector.vector_like} -- Another vector being checked for less-than-or-equal.
+
+        Returns:
+            bool -- Whether self is less-than-or-equal to other.
+        """
+        # TODO: Implement TypeError Handling here.
         return self.mag <= other.mag
 
     def __bool__(self) -> bool:
+        """ Vector boolean conversion. A vector is equal to True if the sum of its
+            components is not 0. Otherwise, it is False.
+
+        Returns:
+            bool -- The boolean status of vector self.
+        """
         return not (sum(self) == 0)
 
     def __neg__(self) -> "Vector":
@@ -429,6 +526,7 @@ class Vector:
         Returns
             Vector -- a new vector with all elements rounded to n decimal places.
         """
+        # TODO: implement type checking for `n`
         return Vector(*(float(round(el, n)) for el in self))
 
     def __complex__(self) -> complex:
@@ -462,6 +560,7 @@ class Vector:
         return float(sum(x * y for x, y in zip(a.pos, b.pos)))
 
     def _dot(self, other: "Vector.vector_like") -> float:
+        "Instance-method implementation of dot product."
         return Vector.dot(self, other)
 
     @staticmethod
@@ -495,6 +594,7 @@ class Vector:
         )
 
     def _cross(self, other: "Vector.vector_like") -> "Vector":
+        "Instance-method implementation of cross product."
         return Vector.cross(self, other)
 
     @staticmethod
@@ -549,6 +649,7 @@ class Vector:
         return acos((a.dot(b)) / (a.mag * b.mag))
 
     def _angle(self, other: "Vector.vector_like") -> float:
+        "Instance-method implementation of angle-between."
         return Vector.angle(self, other)
 
     @staticmethod
