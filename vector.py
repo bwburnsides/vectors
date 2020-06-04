@@ -263,7 +263,7 @@ class Vector:
             TypeError -- One or more vecs are not vector-like.
 
         Returns:
-            vecs {Vector} -- Padded vectors.
+            vecs {Tuple[Vector]} -- Padded vectors.
         """
         if not all(Vector.is_vectorlike(vec) for vec in vecs):
             raise TypeError(
@@ -275,8 +275,38 @@ class Vector:
         return (Vector.from_vectorlike(vec) for vec in vecs)
 
     @staticmethod
-    def reduce_vectors(*vecs: "Vector.vector_like") -> Tuple["Vector"]:
-        raise NotImplementedError
+    def to_dimension(n: int, *vecs: "Vector.vector_like") -> Tuple["Vector"]:
+        """ Convert vectors to a specific dimension. If vectors exceed specified dimension, extra
+            components are truncated. Missing components are filled with zeros.
+
+        Arguments:
+            n {int} -- dimension to convert vectors to.
+            *vecs {Vector.vector_like} -- vectors to convert.
+
+        Raises:
+            TypeError -- n is not int, or vec in vecs is not vector-like.
+            ValueError -- n is not positive.
+
+        Returns:
+            vecs {Tuple[Vector]} -- converted vectors.
+        """
+        if not isinstance(n, int):
+            raise TypeError("n must be int.")
+        if n < 0:
+            raise ValueError("n must be positive.")
+        if not all(Vector.is_vectorlike(vec) for vec in vecs):
+            raise TypeError(
+                Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
+            )
+        # TODO: clean up implementation
+        vecs = [list(vec) for vec in vecs]
+        vlists = [[0 for i in range(n)] for vec in vecs]
+        for i, vlist in enumerate(vlists):
+            vlist[0 : len(vecs[i])] = vecs[i][0:n]
+        output = tuple([Vector.from_vectorlike(vlist) for vlist in vlists])
+        if len(output) == 1:
+            return output[0]
+        return output
 
     def __add__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector addition implementation.
@@ -603,7 +633,7 @@ class Vector:
         Returns:
             complex -- A complex-number representation of vector self.
         """
-        v = [0, 0][0 : len(self)] = self[0:2]
+        v = Vector.to_dimension(2, self)
         return complex(v[0], v[1])
 
     @staticmethod
@@ -655,11 +685,7 @@ class Vector:
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
-
-        v1, v2 = [[0, 0, 0] for i in range(2)]
-        v1[0 : len(a)] = a[0:3]
-        v2[0 : len(b)] = b[0:3]
-
+        v1, v2 = Vector.to_dimension(3, a, b)
         return Vector(
             (v1[1] * v2[2]) - (v1[2] * v2[1]),
             (v1[2] * v2[0]) - (v1[0] * v2[2]),
