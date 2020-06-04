@@ -243,6 +243,35 @@ class Vector:
             return True
         return False
 
+    @staticmethod
+    def pad_vectors(
+        a: "Vector.vector_like", b: "Vector.vector_like"
+    ) -> Tuple["Vector", "Vector"]:
+        """ On input of two vectors, pad the vector with fewer components with zeros to match the
+            length of the vector with more components. Useful for vector addition and subtracting.
+
+        Arguments:
+            a {Vector.vector_like} -- Vector 1
+            b {Vector.vector_like} -- Vector 2
+
+        Returns:
+            a_aug {Vector} -- Vector 1, potentially augmented
+            b_aug {Vector} -- Vector 2, potentially augmented
+        """
+        # TODO: Figure out how to generalize this such that it may accept
+        # an arbitrary number of vectors at once.
+        if not (Vector.is_vectorlike(a) and Vector.is_vectorlike(b)):
+            raise TypeError(
+                Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
+            )
+        a_aug, b_aug = list(a), list(b)
+        alen, blen = len(a_aug), len(b_aug)
+        if max(alen, blen) == alen:
+            b_aug[:] = [b_aug[i] if i < blen else 0 for i, j in enumerate(a_aug)]
+        else:
+            a_aug[:] = [a_aug[i] if i < alen else 0 for i, j in enumerate(b_aug)]
+        return a_aug, b_aug
+
     def __add__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector addition implementation.
 
@@ -257,12 +286,9 @@ class Vector:
                 Vector.messages["vector_like_singular"]
                 + Vector.messages["vector_types"]
             )
-        # TODO: Cleanup addition implementation (too wordy)
-        a, b = list(self.pos), list(Vector.from_vectorlike(other).pos)
-        if max(len(a), len(b)) == len(a):
-            b[:] = [b[i] if i < len(b) else 0 for i, j in enumerate(a)]
-        else:
-            a[:] = [a[i] if i < len(a) else 0 for i, j in enumerate(b)]
+        # TODO: Type checking is being performed both here and in Vector.pad_vectors. Perhaps
+        # this should be unified to only be done in one location. (Class-wide)
+        a, b = Vector.pad_vectors(self, other)
         return Vector(*(sum(n) for n in zip(a, b)))
 
     def __radd__(self, other: "Vector.vector_like") -> "Vector":
@@ -305,7 +331,8 @@ class Vector:
                 Vector.messages["vector_like_singular"]
                 + Vector.messages["vector_types"]
             )
-        return Vector(*(se - oe for se, oe in zip(self, other)))
+        a, b = Vector.pad_vectors(self, other)
+        return Vector(*(ae - be for ae, be in zip(a, b)))
 
     def __rsub__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector (reflexive) subtraction implementation.
@@ -429,8 +456,12 @@ class Vector:
         Returns:
             bool -- Whether self is greater than other.
         """
-        # TODO: Implement TypeError Handling here.
-        return self.mag > other.mag
+        if not Vector.is_vectorlike(other):
+            raise TypeError(
+                Vector.messages["vector_like_singular"]
+                + Vector.messages["vector_types"]
+            )
+        return self.mag > Vector.from_vectorlike(other).mag
 
     def __lt__(self, other: "Vector.vector_like") -> bool:
         """ Vector less-than comparison. A vector is less than another
@@ -442,8 +473,12 @@ class Vector:
         Returns:
             bool -- Whether self is less than other.
         """
-        # TODO: Implement TypeError Handling here.
-        return self.mag < other.mag
+        if not Vector.is_vectorlike(other):
+            raise TypeError(
+                Vector.messages["vector_like_singular"]
+                + Vector.messages["vector_types"]
+            )
+        return self.mag < Vector.from_vectorlike(other).mag
 
     def __ge__(self, other: "Vector.vector_like") -> bool:
         """ Vector greater-than-or-equal comparison. A vector is greater-than-or-equal to another
@@ -455,8 +490,12 @@ class Vector:
         Returns:
             bool -- Whether self is greater-than-or-equal to other.
         """
-        # TODO: Implement TypeError Handling here.
-        return self.mag >= other.mag
+        if not Vector.is_vectorlike(other):
+            raise TypeError(
+                Vector.messages["vector_like_singular"]
+                + Vector.messages["vector_types"]
+            )
+        return self.mag >= Vector.from_vectorlike(other).mag
 
     def __le__(self, other: "Vector.vector_like") -> bool:
         """ Vector less-than-or-equal comparison. A vector is less-than-or-equal to another
@@ -468,8 +507,12 @@ class Vector:
         Returns:
             bool -- Whether self is less-than-or-equal to other.
         """
-        # TODO: Implement TypeError Handling here.
-        return self.mag <= other.mag
+        if not Vector.is_vectorlike(other):
+            raise TypeError(
+                Vector.messages["vector_like_singular"]
+                + Vector.messages["vector_types"]
+            )
+        return self.mag <= Vector.from_vectorlike(other).mag
 
     def __bool__(self) -> bool:
         """ Vector boolean conversion. A vector is equal to True if the sum of its
@@ -520,13 +563,19 @@ class Vector:
         """
         return Vector(*(float(ceil(el)) for el in self))
 
-    def __round__(self, n) -> "Vector":
+    def __round__(self, n: int) -> "Vector":
         """ round() implementation.
 
-        Returns
+        Arguments:
+            n {int} -- number of decimals to round components of self to.
+
+        Returns:
             Vector -- a new vector with all elements rounded to n decimal places.
         """
-        # TODO: implement type checking for `n`
+        if not isinstance(n, int):
+            raise TypeError("n must be an int.")
+        if n < 0:
+            raise ValueError("n must be >= 0.")
         return Vector(*(float(round(el, n)) for el in self))
 
     def __complex__(self) -> complex:
