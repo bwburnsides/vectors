@@ -1,7 +1,7 @@
 from math import acos, cos, sin, floor, ceil
 from typing import Any, Union, Optional, Tuple
 
-# TODO: Add exception raising to method docstrings so that users can implement exception handling.
+# TODO: Add exceptions raised to method docstrings so that users can implement exception handling.
 
 
 class Vector:
