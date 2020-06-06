@@ -33,20 +33,20 @@ class Vector:
                 "Vector coords must be scalar-like. " + Vector.messages["scalar_types"]
             )
 
-        self._pos = None  # type: Optional[Tuple[float]]
-        self._unit = None  # type: Optional[Vector]
-        self._mag = None  # type: Optional[float]
+        self._pos: Optional[Tuple[float, ...]] = None
+        self._unit: Optional[Vector] = None
+        self._mag: Optional[float] = None
 
         # TODO: Find an more automated way to do this! (descriptor class/ decorator)
-        self.cross = self._cross
-        self.dot = self._dot
-        self.box = self._box
-        self.angle = self._angle
-        self.comp = self._comp
-        self.proj = self._proj
-        self.reject = self._reject
+        self.cross = self._cross  # type: ignore
+        self.dot = self._dot  # type: ignore
+        self.box = self._box  # type: ignore
+        self.angle = self._angle  # type: ignore
+        self.comp = self._comp  # type: ignore
+        self.proj = self._proj  # type: ignore
+        self.reject = self._reject  # type: ignore
 
-    def __getitem__(self, i: Union[slice, int]) -> Union[tuple, float]:
+    def __getitem__(self, i: Union[slice, int]) -> Union[float, Tuple[float, ...]]:
         """ Use the subscript [] operator and with vectors as you would with lists
         and tuples.
 
@@ -55,6 +55,7 @@ class Vector:
 
         Raises:
             IndexError -- Index is greater than length of vector.
+            NotImplementedError -- Tuple indexing not supported yet.
             TypeError -- [] accepts only int or slice.
 
         Returns:
@@ -66,6 +67,10 @@ class Vector:
             if i < len(self):
                 return self.pos[i]
             raise IndexError("Index '{}' exceeds vector length.".format(i))
+        elif isinstance(i, tuple):
+            raise NotImplementedError(
+                "Indexing by tuple not supported by vector class."
+            )
         else:
             raise TypeError("Operand must have type int or slice.")
 
@@ -102,7 +107,9 @@ class Vector:
         self.n = 0
         return self
 
-    def __next__(self) -> float:
+    def __next__(
+        self,
+    ) -> Union[float, Tuple[float, ...]]:  # <-- NOTE: always float but needed for mypy
         """ Defines Vector iterator behavior by stepping through vector dimensions.
 
         Raises:
@@ -119,7 +126,7 @@ class Vector:
             raise StopIteration
 
     @property
-    def pos(self) -> Tuple[float]:
+    def pos(self) -> Tuple[float, ...]:
         """ A tuple of coordinates from Vector self.
 
         Returns:
@@ -131,7 +138,7 @@ class Vector:
         return self._pos
 
     @pos.setter
-    def pos(self, new_val: "Tuple[Vector.scalar_like]") -> None:
+    def pos(self, new_val: Tuple["Vector.scalar_like", ...]) -> None:
         raise AttributeError("Vectors are immutable.")
 
     @property
@@ -157,7 +164,7 @@ class Vector:
             float -- the magnitude of the vector.
         """
         if not self._mag:
-            self._mag = (self.dot(self)) ** (1 / 2)
+            self._mag = (Vector.dot(self, self)) ** (1 / 2)
         return self._mag
 
     @mag.setter
@@ -198,6 +205,10 @@ class Vector:
         Returns:
             Vector -- A vector with the same coordinates as vectorlike.
         """
+        if not Vector.is_vectorlike(vectorlike):
+            raise TypeError(
+                Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
+            )
         return cls(*vectorlike)
 
     @classmethod
@@ -222,20 +233,22 @@ class Vector:
         return cls(float(mag) * cos(theta), float(mag) * sin(theta))
 
     @staticmethod
-    def is_vectorlike(potential: Any) -> bool:
-        """ Test for object being vector-like.
+    def is_vectorlike(*potential: Any) -> bool:
+        """ Test for objects being vector-like. Return True iff all objects are vector-like.
 
         Arguments:
-            potential {Any} -- Object to test for vector-likeness.
+            *potential {Any} -- Object to test for vector-likeness.
 
         Returns:
-            bool -- Whether potential is vector-like or not.
+            bool -- Whether *potential contains only vector-like.
         """
-        if hasattr(potential, "__iter__") and all(
-            Vector.is_scalarlike(element) for element in potential
-        ):
-            return True
-        return False
+        for obj in potential:
+            if not (
+                hasattr(obj, "__iter__")
+                and all(Vector.is_scalarlike(element) for element in obj)
+            ):
+                return False
+        return True
 
     @staticmethod
     def is_scalarlike(potential: Any) -> bool:
@@ -252,7 +265,7 @@ class Vector:
         return False
 
     @staticmethod
-    def pad_vectors(*vecs: "Vector.vector_like") -> Tuple["Vector"]:
+    def pad_vectors(*vecs: "Vector.vector_like") -> Tuple["Vector", ...]:
         """ Returned vectors will be padded with zeroes such that they all share the same length
             as the vector with the most components.
 
@@ -269,13 +282,13 @@ class Vector:
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
-        vecs = [list(vec) for vec in vecs]
-        m = max(len(vec) for vec in vecs)
-        vecs = [[vec[i] if i < len(vec) else 0 for i in range(m)] for vec in vecs]
-        return (Vector.from_vectorlike(vec) for vec in vecs)
+        lvecs = [list(vec) for vec in vecs]
+        m = max(len(lvec) for lvec in lvecs)
+        lvecs = [[lvec[i] if i < len(lvec) else 0 for i in range(m)] for lvec in lvecs]
+        return tuple([Vector.from_vectorlike(lvec) for lvec in lvecs])
 
     @staticmethod
-    def to_dimension(n: int, *vecs: "Vector.vector_like") -> Tuple["Vector"]:
+    def to_dimension(n: int, *vecs: "Vector.vector_like") -> Tuple["Vector", ...]:
         """ Convert vectors to a specific dimension. If vectors exceed specified dimension, extra
             components are truncated. Missing components are filled with zeros.
 
@@ -298,15 +311,11 @@ class Vector:
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
-        # TODO: clean up implementation
-        vecs = [list(vec) for vec in vecs]
-        vlists = [[0 for i in range(n)] for vec in vecs]
+        lvecs = [list(vec) for vec in vecs]
+        vlists = [[0 for i in range(n)] for lvec in lvecs]
         for i, vlist in enumerate(vlists):
             vlist[0 : len(vecs[i])] = vecs[i][0:n]
-        output = tuple([Vector.from_vectorlike(vlist) for vlist in vlists])
-        if len(output) == 1:
-            return output[0]
-        return output
+        return tuple([Vector.from_vectorlike(vlist) for vlist in vlists])
 
     def __add__(self, other: "Vector.vector_like") -> "Vector":
         """ Vector addition implementation.
@@ -434,8 +443,8 @@ class Vector:
         return self * scalar
 
     def __truediv__(self, scalar: "Vector.scalar_like") -> "Vector":
-        """ An implementation of "vector scalar division" aka vector scalar multiplication
-            of the form self * (1/scalar)
+        """ An implementation of "vector scalar division" aka vector
+            scalar multiplication of the form self * (1/scalar)
 
         Arguments:
             scalar {Vector.scalar_like} -- The second '/' operand.
@@ -633,7 +642,7 @@ class Vector:
         Returns:
             complex -- A complex-number representation of vector self.
         """
-        v = Vector.to_dimension(2, self)
+        (v,) = Vector.to_dimension(2, self)
         return complex(v[0], v[1])
 
     @staticmethod
@@ -657,7 +666,8 @@ class Vector:
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
-        return float(sum(x * y for x, y in zip(a.pos, b.pos)))
+        a_vec, b_vec = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
+        return float(sum(x * y for x, y in zip(a_vec.pos, b_vec.pos)))
 
     def _dot(self, other: "Vector.vector_like") -> float:
         "Instance-method implementation of dot product."
@@ -685,6 +695,8 @@ class Vector:
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
+        v1: Optional["Vector"] = None
+        v2: Optional["Vector"] = None
         v1, v2 = Vector.to_dimension(3, a, b)
         return Vector(
             (v1[1] * v2[2]) - (v1[2] * v2[1]),
@@ -716,7 +728,7 @@ class Vector:
         if not (
             Vector.is_vectorlike(a)
             and Vector.is_vectorlike(b)
-            and Vector.vector_like(c)
+            and Vector.is_vectorlike(c)
         ):
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
@@ -724,7 +736,7 @@ class Vector:
         a = Vector.from_vectorlike(a)
         b = Vector.from_vectorlike(b)
         c = Vector.from_vectorlike(c)
-        return a.dot(b.cross(c))
+        return Vector.dot(a, Vector.cross(b, c))
 
     def _box(self, *vecs: "Vector.vector_like") -> float:
         "Instance-method implementation of scalar triple product."
@@ -751,7 +763,7 @@ class Vector:
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
-        return acos((a.dot(b)) / (a.mag * b.mag))
+        return acos(Vector.dot(a, b) / (a.mag * b.mag))
 
     def _angle(self, other: "Vector.vector_like") -> float:
         "Instance-method implementation of angle-between."
@@ -778,7 +790,7 @@ class Vector:
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
-        return a.dot(a) / b.mag
+        return Vector.dot(a, a) / b.mag
 
     def _comp(self, other: "Vector.vector_like") -> float:
         "Instance-method implementation of scalar projection."
@@ -805,7 +817,7 @@ class Vector:
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
-        return a.dot(b.unit) * b.unit
+        return Vector.dot(a, b.unit) * b.unit
 
     def _proj(self, other: "Vector.vector_like") -> "Vector":
         "Instance-method implementation of vector projection."
@@ -832,7 +844,7 @@ class Vector:
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
         a, b = Vector.from_vectorlike(a), Vector.from_vectorlike(b)
-        return a - ((a.dot(b) / b.dot(b)) * b)
+        return a - ((Vector.dot(a, b) / Vector.dot(b, b)) * b)
 
     def _reject(self, other: "Vector.vector_like") -> "Vector":
         "Instance-method implementation of vector rejection."
