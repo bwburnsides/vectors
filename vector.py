@@ -5,7 +5,7 @@ Recommend importing as such, for terse initialization:
 """
 
 from math import acos, cos, sin, floor, ceil
-from typing import Any, Union, Optional, Tuple
+from typing import Any, Union, Optional, List, Tuple, overload
 
 
 class Vector:
@@ -142,7 +142,17 @@ class Vector:
             )
         return cls(float(mag) * cos(theta), float(mag) * sin(theta))
 
-    def __getitem__(self, i: Union[slice, int]) -> Union[float, Tuple[float, ...]]:
+    @overload
+    def __getitem__(self, i: int) -> float:
+        """Indexing method signature for index subscripts."""
+        ...
+
+    @overload
+    def __getitem__(self, i: slice) -> Tuple[float, ...]:
+        """Indexing method signature for slice subscripts."""
+        ...
+
+    def __getitem__(self, i: Union[slice, int]) -> Union[Tuple[float, ...], float]:
         """Use the subscript `[]` operator and with vectors as you would with `list`s and `tuple`s.
 
         Arguments:
@@ -150,7 +160,7 @@ class Vector:
 
         Raises:
             `IndexError` -- Index is greater than length of vector.
-            `NotImplementedError` -- `tuple` indexing not supported yet.
+            `NotImplementedError` -- `tuple` indexing not supported.
             `TypeError` -- `[]` accepts only int or slice.
 
         Returns:
@@ -164,7 +174,7 @@ class Vector:
             (1.0, 2.0)
         """
         if isinstance(i, slice):
-            return self.pos[i.start : i.stop : i.step]
+            return self.pos[i]
         elif isinstance(i, int):
             if i < len(self):
                 return self.pos[i]
@@ -172,7 +182,7 @@ class Vector:
         elif isinstance(i, tuple):
             raise NotImplementedError(
                 "Indexing by tuple not supported by vector class."
-            )  # TODO: implement tuple indexing
+            )
         else:
             raise TypeError("Operand must have type int or slice.")
 
@@ -226,9 +236,7 @@ class Vector:
         self.n = 0
         return self
 
-    def __next__(
-        self,
-    ) -> Union[float, Tuple[float, ...]]:  # <-- NOTE: always float but needed for mypy
+    def __next__(self) -> float:
         """Define `Vector()` iterator behavior by stepping through vector dimensions.
 
         Raises:
@@ -458,8 +466,8 @@ class Vector:
                 Vector.messages["vector_like_singular"]
                 + Vector.messages["vector_types"]
             )
-        a, b = Vector.pad_vectors(self, other)
-        return Vector(*(sum(n) for n in zip(a, b)))
+        a, b = Vector.to_dimension(max(len(self), len(other)), self, other)
+        return Vector(*(sum(n) for n in zip(a.pos, b.pos)))
 
     def __radd__(self, other: "Vector.vector_like") -> "Vector":
         """`Vector()` (reflexive) addition implementation.
@@ -516,8 +524,8 @@ class Vector:
                 Vector.messages["vector_like_singular"]
                 + Vector.messages["vector_types"]
             )
-        a, b = Vector.pad_vectors(self, other)
-        return Vector(*(ae - be for ae, be in zip(a, b)))
+        a, b = Vector.to_dimension(max(len(self), len(other)), self, other)
+        return Vector(*(ae - be for ae, be in zip(a.pos, b.pos)))
 
     def __rsub__(self, other: "Vector.vector_like") -> "Vector":
         """`Vector()` (reflexive) subtraction implementation.
@@ -762,7 +770,7 @@ class Vector:
             `complex` -- A complex-number representation of vector self.
         """
         (v,) = Vector.to_dimension(2, self)
-        return complex(v[0], v[1])
+        return complex(v.pos[0], v.pos[1])
 
     @staticmethod
     def dot(  # pylint: disable=method-hidden
@@ -821,9 +829,9 @@ class Vector:
         v2: Optional["Vector"] = None
         v1, v2 = Vector.to_dimension(3, a, b)
         return Vector(
-            (v1[1] * v2[2]) - (v1[2] * v2[1]),
-            (v1[2] * v2[0]) - (v1[0] * v2[2]),
-            (v1[0] * v2[1]) - (v1[1] * v2[0]),
+            (v1.pos[1] * v2.pos[2]) - (v1.pos[2] * v2.pos[1]),
+            (v1.pos[2] * v2.pos[0]) - (v1.pos[0] * v2.pos[2]),
+            (v1.pos[0] * v2.pos[1]) - (v1.pos[1] * v2.pos[0]),
         )
 
     def _cross(self, other: "Vector.vector_like") -> "Vector":
@@ -1021,35 +1029,6 @@ class Vector:
         return False
 
     @staticmethod
-    def pad_vectors(*vecs: "Vector.vector_like") -> Tuple["Vector", ...]:
-        """Return vectors padded with zeroes.
-
-            All will share the same length as the vector with the most components.
-
-        Arguments:
-            `*vecs` {`Vector.vector_like`} -- Vectors to be padded.
-
-        Raises:
-            `TypeError` -- One or more vecs are not vector-like.
-
-        Returns:
-            `tuple` {`Tuple[Vector, ...]`} -- Padded vectors.
-
-        Examples:
-            >>> a, b, c = Vector(1, 2, 3), Vector(1, 2, 3, 4), Vector(1, 2)
-            >>> Vector.pad_vectors(a, b, c)
-            (Vector: <1.0, 2.0, 3.0, 0.0>, Vector: <1.0, 2.0, 3.0, 4.0>, Vector: <1.0, 2.0, 0.0, 0.0>)
-        """
-        if not all(Vector.is_vectorlike(vec) for vec in vecs):
-            raise TypeError(
-                Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
-            )
-        lvecs = [list(vec) for vec in vecs]
-        m = max(len(lvec) for lvec in lvecs)
-        lvecs = [[lvec[i] if i < len(lvec) else 0 for i in range(m)] for lvec in lvecs]
-        return tuple([Vector.from_vectorlike(lvec) for lvec in lvecs])
-
-    @staticmethod
     def to_dimension(n: int, *vecs: "Vector.vector_like") -> Tuple["Vector", ...]:
         """Convert vectors to a specific dimension.
 
@@ -1083,5 +1062,5 @@ class Vector:
         lvecs = [list(vec) for vec in vecs]
         vlists = [[0 for i in range(n)] for lvec in lvecs]
         for i, vlist in enumerate(vlists):
-            vlist[0 : len(vecs[i])] = vecs[i][0:n]
+            vlist[0 : len(vecs[i])] = vecs[i][0:n]  # type: ignore # TODO: fix this typing issue.
         return tuple([Vector.from_vectorlike(vlist) for vlist in vlists])

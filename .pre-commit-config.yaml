@@ -21,3 +21,7 @@ repos:
     hooks:
       - id: flake8
         args: [--max-line-length=99]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: f687d36b12cd72d417bba07599ff27e734161768
+    hooks:
+      - id: mypy
