@@ -1,3 +1,10 @@
+"""This script is used to generate traces for Monkeytype to detect.
+
+Eventually type hinting may be automatically generated for vector.py. vector.py is already 95%+
+type hinted; however, mypy has issues with a few of my type hints. Hopefully this may clear
+them up. This also serves as a way to perform quick tests until unit tests are properly built
+out with pytest.
+"""
 from vector import Vector as v
 
 # Create vectors by passing in coords directly

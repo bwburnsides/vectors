@@ -1,10 +1,10 @@
 [flake8]
-ignore =  
+ignore =
     E203,  # E203: whitespace before ':'
-    E501,  # E501: line too long (> 79 characters)  
-    W503,  # W503: line break before binary operator 
+    E501,  # E501: line too long (> 79 characters)
+    W503,  # W503: line break before binary operator
     F401,  # H401: docstring should not start with a space
-    F403,  # H403: multi line docstrings should end on a new line 
+    F403,  # H403: multi line docstrings should end on a new line
 max-line-length = 99
 max-complexity = 23
 select = B,C,E,F,W,T4,B9
