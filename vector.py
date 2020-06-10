@@ -38,7 +38,7 @@ class Vector:
             >>> a
             Vector: <1.0, 2.0, 3.0>
         """
-        self._coords = coords if coords else (0, 0, 0)
+        self._coords = coords if coords else tuple()
         if not all(Vector.is_scalarlike(el) for el in self._coords):
             raise TypeError(
                 "Vector coords must be scalar-like. " + Vector.messages["scalar_types"]
@@ -49,7 +49,7 @@ class Vector:
         self._unit: Optional[Vector] = None
         self._mag: Optional[float] = None
 
-        # TODO: Find an more automated way to do this! (descriptor class/ decorator)
+        # TODO: Find a more automated way to do this! (descriptor class/ decorator)
         self.cross = self._cross  # type: ignore
         self.dot = self._dot  # type: ignore
         self.box = self._box  # type: ignore
@@ -221,11 +221,11 @@ class Vector:
         Examples:
             >>> a = Vector(1, 1, 1)
             >>> str(a)
-            '(1.0, 1.0, 1.0)'
+            '<1.0, 1.0, 1.0>'
         """
         if not self.pos:
             self.pos
-        return str(self._pos_rounded)
+        return str(self._pos_rounded).replace("(", "<").replace(")", ">")
 
     def __iter__(self) -> "Vector":
         """Reset iteration; needed for Iterator Protocol.
@@ -267,7 +267,6 @@ class Vector:
         if not self._pos:
             self._pos = tuple([float(pt) for pt in self._coords])
             self._pos_rounded = tuple([round(pt, 3) for pt in self._pos])
-            del self._coords
         return self._pos
 
     @pos.setter
@@ -287,7 +286,10 @@ class Vector:
             Vector: <1.0, 0.0>
         """
         if not self._unit:
-            self._unit = self / self.mag
+            try:
+                self._unit = self / self.mag
+            except ZeroDivisionError:
+                self._unit = self * 0
         return self._unit
 
     @unit.setter
@@ -626,6 +628,7 @@ class Vector:
 
         Raises:
             `TypeError` -- If `scalar` is not scalar-like.
+            `ZeroDivisionError` -- If `scalar` is 0.
 
         Returns:
             `Vector` -- A new vector as the result of `self * (1/scalar)`.
@@ -640,6 +643,8 @@ class Vector:
                 Vector.messages["scalar_like_singular"]
                 + Vector.messages["scalar_types"]
             )
+        if scalar == 0:
+            raise ZeroDivisionError("Scalar must be non-zero.")
         return (1 / scalar) * self
 
     def __itruediv__(self, scalar: "Vector.scalar_like") -> "Vector":
@@ -1024,7 +1029,8 @@ class Vector:
             >>> Vector.is_scalarlike(a), Vector.is_scalarlike(b), Vector.is_scalarlike(c)
             (True, True, False)
         """
-        if isinstance(potential, int) or isinstance(potential, float):
+        # using type() here to avoid bools being valid scalars.
+        if type(potential) in (int, float):
             return True
         return False
 
