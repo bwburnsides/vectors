@@ -5,7 +5,7 @@ Recommend importing as such, for terse initialization:
 """
 
 from math import acos, cos, sin, floor, ceil
-from typing import Any, Union, Optional, List, Tuple, overload
+from typing import TypeVar, Any, Union, Optional, List, Tuple, Callable, overload, cast
 
 
 class Vector:
@@ -13,6 +13,7 @@ class Vector:
 
     vector_like = Union["Vector", tuple, list]
     scalar_like = Union[float, int]
+    arbitrary_signature = TypeVar("arbitrary_signature", bound=Callable[..., Any])
 
     # TODO: Unify and clean up messages.
     messages = {
@@ -23,6 +24,26 @@ class Vector:
         "scalar_types": "(float, int, bool)",
         "vector_types": "(Vector, tuple, list)",
     }
+
+    class VectorDecorators:
+        """Namespace decorators for methods in Vector() in an attempt to DRY up code."""
+
+        @staticmethod
+        def check_for_veclike(
+            func: "Vector.arbitrary_signature",
+        ) -> "Vector.arbitrary_signature":
+            """Handle checking of args for veclikeness, and raising TypeErrors.
+
+            Arguments:
+                func {Vector() method}: function for arg validating
+            """
+
+            def wrapper(*args, **kwargs):
+                # TODO: figure out how to generalize this for many methods with differing kind of
+                # inputs: ie - 1 vectorlike, 2+ vectorlikes, vectorlike and a scalar, etc
+                return func(*args, **kwargs)
+
+            return cast("Vector.arbitrary_signature", wrapper)
 
     def __init__(self, *coords: "Vector.scalar_like") -> None:
         """Initialize a new `Vector()` object.
@@ -36,7 +57,7 @@ class Vector:
         Examples:
             >>> a = Vector(1, 2, 3)
             >>> a
-            Vector: <1.0, 2.0, 3.0>
+            <1.0, 2.0, 3.0>
         """
         self._coords = coords if coords else tuple()
         if not all(Vector.is_scalarlike(el) for el in self._coords):
@@ -134,7 +155,7 @@ class Vector:
         >>> from math import pi
         >>> a = Vector.from_angle(pi / 2, 1)
         >>> a
-        Vector: <0.0, 1.0>
+        <0.0, 1.0>
         """
         if not (Vector.is_scalarlike(theta) and Vector.is_scalarlike(mag)):
             raise TypeError(
@@ -174,11 +195,11 @@ class Vector:
             (1.0, 2.0)
         """
         if isinstance(i, slice):
-            return self.pos[i]
+            return tuple([self[j] for j in range(*i.indices(len(self)))])
         elif isinstance(i, int):
             if i < len(self):
                 return self.pos[i]
-            raise IndexError("Index '{}' exceeds vector length.".format(i))
+            raise IndexError(f"Index '{i}' exceeds vector length.")
         elif isinstance(i, tuple):
             raise NotImplementedError(
                 "Indexing by tuple not supported by vector class."
@@ -208,9 +229,9 @@ class Vector:
         Examples:
             >>> a = Vector(1, 1, 1)
             >>> repr(a)
-            'Vector: <1.0, 1.0, 1.0>'
+            '<1.0, 1.0, 1.0>'
         """
-        return "Vector: " + str(self).replace("(", "<").replace(")", ">")
+        return str(self)
 
     def __str__(self) -> str:
         """Return an simple string representation of vector self.
@@ -283,7 +304,7 @@ class Vector:
         Examples:
             >>> a = Vector(5, 0)
             >>> a.unit
-            Vector: <1.0, 0.0>
+            <1.0, 0.0>
         """
         if not self._unit:
             try:
@@ -340,6 +361,7 @@ class Vector:
             return False
         return self.pos == Vector.from_vectorlike(other).pos
 
+    @VectorDecorators.check_for_veclike
     def __gt__(self, other: "Vector.vector_like") -> bool:
         """`Vector()` greater-than comparison.
 
@@ -365,6 +387,7 @@ class Vector:
             )
         return self.mag > Vector.from_vectorlike(other).mag
 
+    # @VectorDecorators.check_for_veclike  # TODO: why does mypy not like this decorator?
     def __lt__(self, other: "Vector.vector_like") -> bool:
         """`Vector()` less-than comparison.
 
@@ -390,6 +413,7 @@ class Vector:
             )
         return self.mag < Vector.from_vectorlike(other).mag
 
+    @VectorDecorators.check_for_veclike
     def __ge__(self, other: "Vector.vector_like") -> bool:
         """`Vector()` greater-than-or-equal comparison.
 
@@ -417,6 +441,7 @@ class Vector:
             )
         return self.mag >= Vector.from_vectorlike(other).mag
 
+    # @VectorDecorators.check_for_veclike  # TODO: why does mypy not like this decorator?
     def __le__(self, other: "Vector.vector_like") -> bool:
         """`Vector()` less-than-or-equal comparison.
 
@@ -442,6 +467,7 @@ class Vector:
             )
         return self.mag <= Vector.from_vectorlike(other).mag
 
+    @VectorDecorators.check_for_veclike
     def __add__(self, other: "Vector.vector_like") -> "Vector":
         """`Vector()` addition implementation.
 
@@ -459,9 +485,9 @@ class Vector:
             >>> b = Vector(4, 5, 6)
             >>> c = [7, 8]
             >>> a + b
-            Vector: <5.0, 7.0, 9.0>
+            <5.0, 7.0, 9.0>
             >>> b + c
-            Vector: <11.0, 13.0, 6.0>
+            <11.0, 13.0, 6.0>
         """
         if not Vector.is_vectorlike(other):
             raise TypeError(
@@ -471,6 +497,7 @@ class Vector:
         a, b = Vector.to_dimension(max(len(self), len(other)), self, other)
         return Vector(*(sum(n) for n in zip(a.pos, b.pos)))
 
+    @VectorDecorators.check_for_veclike
     def __radd__(self, other: "Vector.vector_like") -> "Vector":
         """`Vector()` (reflexive) addition implementation.
 
@@ -482,10 +509,11 @@ class Vector:
 
         Examples:
             >>> [1, 2, 3] + Vector(2, 5, 6)
-            Vector: <3.0, 7.0, 9.0>
+            <3.0, 7.0, 9.0>
         """
         return self + other
 
+    @VectorDecorators.check_for_veclike
     def __iadd__(self, other: "Vector.vector_like") -> "Vector":
         """`Vector()` addition implementation.
 
@@ -499,10 +527,11 @@ class Vector:
             >>> a = Vector(1, 2, 3)
             >>> a += [4, 5, 6]
             >>> a
-            Vector: <5.0, 7.0, 9.0>
+            <5.0, 7.0, 9.0>
         """
         return self + other
 
+    @VectorDecorators.check_for_veclike
     def __sub__(self, other: "Vector.vector_like") -> "Vector":
         """`Vector()` subtraction implementation.
 
@@ -519,7 +548,7 @@ class Vector:
             >>> a = Vector(1, 2, 3)
             >>> b = Vector(1, 1, 1)
             >>> a - b
-            Vector: <0.0, 1.0, 2.0>
+            <0.0, 1.0, 2.0>
         """
         if not Vector.is_vectorlike(other):
             raise TypeError(
@@ -529,6 +558,7 @@ class Vector:
         a, b = Vector.to_dimension(max(len(self), len(other)), self, other)
         return Vector(*(ae - be for ae, be in zip(a.pos, b.pos)))
 
+    @VectorDecorators.check_for_veclike
     def __rsub__(self, other: "Vector.vector_like") -> "Vector":
         """`Vector()` (reflexive) subtraction implementation.
 
@@ -540,10 +570,11 @@ class Vector:
 
         Examples:
             >>> [1, 2, 3] - Vector(1, 1, 1)
-            Vector: <0.0, 1.0, 2.0>
+            <0.0, 1.0, 2.0>
         """
         return -self + other
 
+    @VectorDecorators.check_for_veclike
     def __isub__(self, other: "Vector.vector_like") -> "Vector":
         """`Vector()` subtraction implementation.
 
@@ -557,10 +588,11 @@ class Vector:
             >>> a = Vector(2, 2, 2)
             >>> a -= Vector(1)
             >>> a
-            Vector: <1.0, 2.0, 2.0>
+            <1.0, 2.0, 2.0>
         """
         return self - other
 
+    @VectorDecorators.check_for_veclike
     def __mul__(self, scalar: "Vector.scalar_like") -> "Vector":
         """`Vector()` scalar multiplication implementation.
 
@@ -576,7 +608,7 @@ class Vector:
         Examples:
             >>> a = Vector(1, 2, 3)
             >>> a * 5
-            Vector: <5.0, 10.0, 15.0>
+            <5.0, 10.0, 15.0>
         """
         if not Vector.is_scalarlike(scalar):
             raise TypeError(
@@ -585,6 +617,7 @@ class Vector:
             )
         return Vector(*(el * float(scalar) for el in self))
 
+    @VectorDecorators.check_for_veclike
     def __rmul__(self, scalar: "Vector.scalar_like") -> "Vector":
         """`Vector()` (reflexive) scalar multiplication implementation.
 
@@ -597,10 +630,11 @@ class Vector:
         Examples:
             >>> a = Vector(1, 2, 3)
             >>> 5 * a
-            Vector: <5.0, 10.0, 15.0>
+            <5.0, 10.0, 15.0>
         """
         return self * scalar
 
+    @VectorDecorators.check_for_veclike
     def __imul__(self, scalar: "Vector.scalar_like") -> "Vector":
         """`Vector()` scalar multiplication implementation, with assignment.
 
@@ -614,10 +648,11 @@ class Vector:
             >>> a = Vector(1, 2, 3)
             >>> a *= 5
             >>> a
-            Vector: <5.0, 10.0, 15.0>
+            <5.0, 10.0, 15.0>
         """
         return self * scalar
 
+    @VectorDecorators.check_for_veclike
     def __truediv__(self, scalar: "Vector.scalar_like") -> "Vector":
         """`Vector()` "scalar divison" implementation.
 
@@ -636,7 +671,7 @@ class Vector:
         Examples:
             >>> a = Vector(4, 6, 8)
             >>> a / 2
-            Vector: <2.0, 3.0, 4.0>
+            <2.0, 3.0, 4.0>
         """
         if not Vector.is_scalarlike(scalar):
             raise TypeError(
@@ -647,6 +682,7 @@ class Vector:
             raise ZeroDivisionError("Scalar must be non-zero.")
         return (1 / scalar) * self
 
+    @VectorDecorators.check_for_veclike
     def __itruediv__(self, scalar: "Vector.scalar_like") -> "Vector":
         """`Vector()` "scalar divison" implementation, with assignment.
 
@@ -662,7 +698,7 @@ class Vector:
             >>> a = Vector(4, 6, 8)
             >>> a /= 2
             >>> a
-            Vector: <2.0, 3.0, 4.0>
+            <2.0, 3.0, 4.0>
         """
         return self / scalar
 
@@ -691,7 +727,7 @@ class Vector:
 
         Examples:
             >>> -Vector(1, 2, 3)
-            Vector: <-1.0, -2.0, -3.0>
+            <-1.0, -2.0, -3.0>
         """
         return Vector(*(-el for el in self))
 
@@ -703,7 +739,7 @@ class Vector:
 
         Examples:
             >>> +Vector(-1, -2, -3)
-            Vector: <-1.0, -2.0, -3.0>
+            <-1.0, -2.0, -3.0>
         """
         return Vector(*(+el for el in self))
 
@@ -715,7 +751,7 @@ class Vector:
 
         Examples:
             >>> abs(Vector(1, -2, 3, -4))
-            Vector: <1.0, 2.0, 3.0, 4.0>
+            <1.0, 2.0, 3.0, 4.0>
         """
         return Vector(*(abs(el) for el in self))
 
@@ -729,7 +765,7 @@ class Vector:
         Examples:
             >>> import math
             >>> math.floor(Vector(2.5, 3.1, 4.8))
-            Vector: <2.0, 3.0, 4.0>
+            <2.0, 3.0, 4.0>
         """
         return Vector(*(float(floor(el)) for el in self))
 
@@ -742,7 +778,7 @@ class Vector:
         Examples:
             >>> import math
             >>> math.ceil(Vector(2.5, 3.1, 4.8))
-            Vector: <3.0, 4.0, 5.0>
+            <3.0, 4.0, 5.0>
         """
         return Vector(*(float(ceil(el)) for el in self))
 
@@ -778,6 +814,7 @@ class Vector:
         return complex(v.pos[0], v.pos[1])
 
     @staticmethod
+    @VectorDecorators.check_for_veclike
     def dot(  # pylint: disable=method-hidden
         a: "Vector.vector_like", b: "Vector.vector_like"
     ) -> float:
@@ -808,6 +845,7 @@ class Vector:
         return Vector.dot(self, other)
 
     @staticmethod
+    @VectorDecorators.check_for_veclike
     def cross(  # pylint: disable=method-hidden
         a: "Vector.vector_like", b: "Vector.vector_like"
     ) -> "Vector":
@@ -844,6 +882,7 @@ class Vector:
         return Vector.cross(self, other)
 
     @staticmethod
+    @VectorDecorators.check_for_veclike
     def box(  # pylint: disable=method-hidden
         a: "Vector.vector_like", b: "Vector.vector_like", c: "Vector.vector_like"
     ) -> float:
@@ -868,9 +907,11 @@ class Vector:
             raise TypeError(
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
-        a = Vector.from_vectorlike(a)
-        b = Vector.from_vectorlike(b)
-        c = Vector.from_vectorlike(c)
+        a, b, c = (
+            Vector.from_vectorlike(a),
+            Vector.from_vectorlike(b),
+            Vector.from_vectorlike(c),
+        )
         return Vector.dot(a, Vector.cross(b, c))
 
     def _box(self, *vecs: "Vector.vector_like") -> float:
@@ -878,6 +919,7 @@ class Vector:
         return Vector.box(self, vecs[0], vecs[1])
 
     @staticmethod
+    @VectorDecorators.check_for_veclike
     def angle(  # pylint: disable=method-hidden
         a: "Vector.vector_like", b: "Vector.vector_like"
     ) -> float:
@@ -905,6 +947,7 @@ class Vector:
         return Vector.angle(self, other)
 
     @staticmethod
+    @VectorDecorators.check_for_veclike
     def comp(  # pylint: disable=method-hidden
         a: "Vector.vector_like", b: "Vector.vector_like"
     ) -> float:
@@ -932,6 +975,7 @@ class Vector:
         return Vector.comp(self, other)
 
     @staticmethod
+    @VectorDecorators.check_for_veclike
     def proj(  # pylint: disable=method-hidden
         a: "Vector.vector_like", b: "Vector.vector_like"
     ) -> "Vector":
@@ -959,6 +1003,7 @@ class Vector:
         return Vector.proj(self, other)
 
     @staticmethod
+    @VectorDecorators.check_for_veclike
     def reject(  # pylint: disable=method-hidden
         a: "Vector.vector_like", b: "Vector.vector_like"
     ) -> "Vector":
@@ -986,7 +1031,7 @@ class Vector:
 
         Examples:
             >>> Vector(1, 2, 3).reject([2, 4, 6])
-            Vector: <0.0, 0.0, 0.0>
+            <0.0, 0.0, 0.0>
         """
         return Vector.reject(self, other)
 
@@ -1030,11 +1075,10 @@ class Vector:
             (True, True, False)
         """
         # using type() here to avoid bools being valid scalars.
-        if type(potential) in (int, float):
-            return True
-        return False
+        return type(potential) in (int, float)
 
     @staticmethod
+    @VectorDecorators.check_for_veclike
     def to_dimension(n: int, *vecs: "Vector.vector_like") -> Tuple["Vector", ...]:
         """Convert vectors to a specific dimension.
 
@@ -1055,7 +1099,7 @@ class Vector:
         Examples:
             >>> a, b, c = Vector(1), Vector(1, 2, 3), Vector()
             >>> Vector.to_dimension(2, a, b, c)
-            (Vector: <1.0, 0.0>, Vector: <1.0, 2.0>, Vector: <0.0, 0.0>)
+            (<1.0, 0.0>, <1.0, 2.0>, <0.0, 0.0>)
         """
         if not isinstance(n, int):
             raise TypeError("n must be int.")
@@ -1066,7 +1110,7 @@ class Vector:
                 Vector.messages["vector_like_plural"] + Vector.messages["vector_types"]
             )
         lvecs = [list(vec) for vec in vecs]
-        vlists = [[0 for i in range(n)] for lvec in lvecs]
+        vlists = [[0 for _ in range(n)] for _ in lvecs]
         for i, vlist in enumerate(vlists):
-            vlist[0 : len(vecs[i])] = vecs[i][0:n]  # type: ignore # TODO: fix this typing issue.
+            vlist[0 : len(vecs[i])] = vecs[i][0:n]  # type: ignore  # TODO: fix typing error
         return tuple([Vector.from_vectorlike(vlist) for vlist in vlists])
