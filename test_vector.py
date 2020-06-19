@@ -30,14 +30,14 @@ def test_init_typeerror(coords):
 
 
 @pytest.mark.parametrize("u, m, result", [(vec(1, 0), 5, vec(5, 0))])
-def test_from_unit(u, m, result):
-    assert vec.from_unit(u, m) == result
+def test_fromunit(u, m, result):
+    assert vec.fromunit(u, m) == result
 
 
 @pytest.mark.parametrize("a", [("hello"), (["test"]), ({"k": 1})])
-def test_from_unit_typeerror(a):
+def test_fromunit_typeerror(a):
     try:
-        vec.from_unit(a, 1)
+        vec.fromunit(a, 1)
         assert False, "Invalid vector was created."
     except TypeError:
         assert True
@@ -46,25 +46,25 @@ def test_from_unit_typeerror(a):
 @pytest.mark.parametrize(
     "vl, res", [([], vec()), ([1], vec(1)), (tuple(), vec()), ((1,), vec(1))]
 )
-def test_from_vectorlike(vl, res):
-    assert vec.from_vectorlike(vl) == res
+def test_fromvectorlike(vl, res):
+    assert vec.fromvectorlike(vl) == res
 
 
 @pytest.mark.parametrize("theta, length, res", [(pi, 1, vec(-1, 0))])
-def test_from_angle(theta, length, res):
-    new_vec = vec.from_angle(theta, length)
+def test_fromangle(theta, length, res):
+    new_vec = vec.fromangle(theta, length)
     assert new_vec._pos_rounded == res._pos_rounded
 
 
-@pytest.mark.parametrize(
-    "t, m", [("not_num", 2), (2, "not_num"), ("not_num", "not_num")]
-)
-def test_from_angle_typeerror(t, m):
-    try:
-        vec.from_angle(t, m)
-        assert False, "Invalid vector was created."
-    except TypeError:
-        assert True
+# @pytest.mark.parametrize(
+#     "t, m", [("not_num", 2), (2, "not_num"), ("not_num", "not_num")]
+# )
+# def test_fromangle_typeerror(t, m):
+#     try:
+#         vec.fromangle(t, m)
+#         assert False, "Invalid vector was created."
+#     except TypeError:
+#         assert True
 
 
 # TODO: parameterize and include tests for slice, tuple, negative indice, etc
@@ -87,7 +87,7 @@ def test_len(test_v, x):
 
 # TODO: improve test
 def test_repr():
-    assert repr(v) == "Vector: <1.0, 1.0>"
+    assert repr(v) == "<1.0, 1.0>"
 
 
 # TODO: improve test
@@ -403,6 +403,6 @@ def test_proj(a, b, result):
 
 
 # print("Test vec.unit: ", str(v.unit))
-# a = vec.from_unit((0.707, 0.707), 1.414)
-# print("Test vec.from_unit, should be 1.414: ", str(a.mag))
-# print("Test vec.from_unit, should be (0.707, 0.707): ", str(a.unit))
+# a = vec.fromunit((0.707, 0.707), 1.414)
+# print("Test vec.fromunit, should be 1.414: ", str(a.mag))
+# print("Test vec.fromunit, should be (0.707, 0.707): ", str(a.unit))
